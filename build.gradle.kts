@@ -33,6 +33,11 @@ tasks.jar {
     manifest {
         attributes["Main-Class"] = "com.soulshinygame.bot.Main"
     }
+
+    archiveBaseName.set("ShinyBot")
+    archiveVersion.set("1.0")
+    destinationDirectory.set(file("$rootDir/ejecutables"))
+
     from(configurations.runtimeClasspath.get().map {
         if (it.isDirectory) it else zipTree(it)
     })
