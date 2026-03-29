@@ -41,14 +41,14 @@
     /* ── PANEL MEDIA GENÉRICA (anime, gifs, etc) ─────── */
     #media-panel {
       position: absolute;
-      bottom: 40px;
-      right: 40px;
+      bottom: 380px; /* Subido para que no pise la Pokédex si salen a la vez */
+      left: 40px;    /* Cambiado de right a left */
       width: 380px;
       background: rgba(10, 10, 10, 0.92);
       border-radius: 20px;
       padding: 16px;
       display: none;
-      animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Animación desde la izquierda */
       box-shadow: 0 0 30px rgba(0,0,0,0.6);
     }
 
@@ -57,19 +57,9 @@
       to   { transform: translateX(0);     opacity: 1; }
     }
 
-    @keyframes slideInRight {
-      from { transform: translateX(120%); opacity: 0; }
-      to   { transform: translateX(0);    opacity: 1; }
-    }
-
     @keyframes slideOut {
       from { transform: translateX(0);     opacity: 1; }
       to   { transform: translateX(-120%); opacity: 0; }
-    }
-
-    @keyframes slideOutRight {
-      from { transform: translateX(0);    opacity: 1; }
-      to   { transform: translateX(120%); opacity: 0; }
     }
 
     .media-header {
@@ -356,7 +346,8 @@
     mediaHeader.style.borderBottom = '2px solid ' + color;
 
     mediaPanel.style.display   = 'block';
-    mediaPanel.style.animation = 'slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    // Modificado para usar slideIn en lugar de slideInRight
+    mediaPanel.style.animation = 'slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
     // Sonido opcional
     if (data.soundUrl && data.soundUrl.length > 0) {
@@ -369,7 +360,8 @@
 
     const duration = (data.durationSeconds || 8) * 1000;
     mediaTimeout = setTimeout(() => {
-      mediaPanel.style.animation = 'slideOutRight 0.4s ease forwards';
+      // Modificado para usar slideOut en lugar de slideOutRight
+      mediaPanel.style.animation = 'slideOut 0.4s ease forwards';
       setTimeout(() => { mediaPanel.style.display = 'none'; }, 400);
     }, duration);
   }
