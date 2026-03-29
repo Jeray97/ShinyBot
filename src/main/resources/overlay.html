@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pokédex Overlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+    }
+
+    :root {
+      --fire:    #FF6B35; --water:   #4FC3F7; --grass:   #66BB6A;
+      --electric:#FFD600; --psychic: #F06292; --ice:     #80DEEA;
+      --dragon:  #7E57C2; --dark:    #5D4037; --fairy:   #F48FB1;
+      --normal:  #9E9E9E; --fighting:#EF5350; --flying:  #90CAF9;
+      --poison:  #AB47BC; --ground:  #FFCA28; --rock:    #BCAAA4;
+      --bug:     #AED581; --ghost:   #7E57C2; --steel:   #78909C;
+    }
+
+    /* ── PANEL POKÉDEX ────────────────────────────────── */
+    #pokedex-panel {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      width: 480px;
+      background: rgba(10, 10, 10, 0.92);
+      border: 3px solid #e53935;
+      border-radius: 20px;
+      padding: 20px;
+      display: none;
+      animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 0 30px rgba(229, 57, 53, 0.5), inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    /* ── PANEL MEDIA GENÉRICA (anime, gifs, etc) ─────── */
+    #media-panel {
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      width: 380px;
+      background: rgba(10, 10, 10, 0.92);
+      border-radius: 20px;
+      padding: 16px;
+      display: none;
+      animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-120%); opacity: 0; }
+      to   { transform: translateX(0);     opacity: 1; }
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    @keyframes slideOut {
+      from { transform: translateX(0);     opacity: 1; }
+      to   { transform: translateX(-120%); opacity: 0; }
+    }
+
+    @keyframes slideOutRight {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(120%); opacity: 0; }
+    }
+
+    .media-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+    }
+
+    .media-title {
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .media-triggered {
+      font-size: 8px;
+      color: #aaa;
+      margin-top: 4px;
+    }
+
+    .media-img-wrapper {
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.03);
+    }
+
+    #media-gif {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    /* ── POKÉDEX estilos compartidos ─────────────────── */
+    .pokedex-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      border-bottom: 2px solid #e53935;
+      padding-bottom: 10px;
+    }
+
+    .pokedex-light {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #4fc3f7;
+      box-shadow: 0 0 10px #4fc3f7;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+
+    .pokedex-title { color: #e53935; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+    .pokedex-number { color: #666; font-size: 10px; margin-left: auto; }
+
+    .pokemon-main { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+
+    .pokemon-sprite-wrapper {
+      width: 120px; height: 120px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      border: 2px solid #333;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; position: relative; overflow: hidden;
+    }
+
+    .pokemon-sprite-wrapper::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    }
+
+    #pokemon-sprite {
+      width: 100px; height: 100px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-6px); }
+    }
+
+    .pokemon-info { flex: 1; }
+    .pokemon-name { color: #fff; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.3); margin-bottom: 8px; }
+    .pokemon-types { display: flex; gap: 6px; margin-bottom: 8px; }
+
+    .type-badge {
+      padding: 3px 10px; border-radius: 20px; font-size: 8px;
+      font-weight: bold; text-transform: uppercase; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .pokemon-triggered { color: #888; font-size: 8px; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .stat-row { display: flex; flex-direction: column; gap: 2px; }
+    .stat-label { color: #888; font-size: 7px; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-bar-wrapper { display: flex; align-items: center; gap: 6px; }
+    .stat-bar { flex: 1; height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
+    .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; width: 0%; }
+    .stat-value { color: #fff; font-size: 8px; min-width: 24px; text-align: right; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Panel Pokédex -->
+<div id="pokedex-panel">
+  <div class="pokedex-header">
+    <div class="pokedex-light"></div>
+    <span class="pokedex-title">Pokédex</span>
+    <span class="pokedex-number" id="pokemon-number">#000</span>
+  </div>
+  <div class="pokemon-main">
+    <div class="pokemon-sprite-wrapper">
+      <img id="pokemon-sprite" src="" alt="pokemon">
+    </div>
+    <div class="pokemon-info">
+      <div class="pokemon-name" id="pokemon-name">???</div>
+      <div class="pokemon-types" id="pokemon-types"></div>
+      <div class="pokemon-triggered" id="pokemon-triggered"></div>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-row">
+      <span class="stat-label">HP</span>
+      <div class="stat-bar-wrapper">
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-hp" style="background:#66BB6A"></div></div>
+        <span class="stat-value" id="val-hp">0</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Ataque</span>
+      <div class="stat-bar-wrapper">
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-atk" style="background:#EF5350"></div></div>
+        <span class="stat-value" id="val-atk">0</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Defensa</span>
+      <div class="stat-bar-wrapper">
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-def" style="background:#4FC3F7"></div></div>
+        <span class="stat-value" id="val-def">0</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Velocidad</span>
+      <div class="stat-bar-wrapper">
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-spd" style="background:#FFD600"></div></div>
+        <span class="stat-value" id="val-spd">0</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel Media genérica (anime, gifs, etc) -->
+<div id="media-panel">
+  <div class="media-header" id="media-header">
+    <div>
+      <div class="media-title" id="media-title">Título</div>
+      <div class="media-triggered" id="media-triggered"></div>
+    </div>
+  </div>
+  <div class="media-img-wrapper">
+    <img id="media-gif" src="" alt="media">
+  </div>
+</div>
+
+<audio id="pokemon-cry" preload="none"></audio>
+
+<script>
+  const TYPE_COLORS = {
+    fire:'#FF6B35', water:'#4FC3F7', grass:'#66BB6A', electric:'#FFD600',
+    psychic:'#F06292', ice:'#80DEEA', dragon:'#7E57C2', dark:'#5D4037',
+    fairy:'#F48FB1', normal:'#9E9E9E', fighting:'#EF5350', flying:'#90CAF9',
+    poison:'#AB47BC', ground:'#FFCA28', rock:'#BCAAA4', bug:'#AED581',
+    ghost:'#7986CB', steel:'#78909C'
+  };
+
+  // ── POKÉDEX ──────────────────────────────────────────
+
+  const pokedexPanel = document.getElementById('pokedex-panel');
+  const sprite       = document.getElementById('pokemon-sprite');
+  const nameEl       = document.getElementById('pokemon-name');
+  const numberEl     = document.getElementById('pokemon-number');
+  const typesEl      = document.getElementById('pokemon-types');
+  const trigEl       = document.getElementById('pokemon-triggered');
+  const cry          = document.getElementById('pokemon-cry');
+  let pokedexTimeout = null;
+
+  function loadSprite(data) {
+    const fallbacks = [
+      data.animatedUrl,
+      data.spriteUrl,
+      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.id}.png`
+    ].filter(url => url && url.length > 0);
+
+    let idx = 0;
+    sprite.onerror = () => {
+      idx++;
+      if (idx < fallbacks.length) sprite.src = fallbacks[idx];
+      else sprite.style.display = 'none';
+    };
+    sprite.style.display = 'block';
+    sprite.src = fallbacks[0];
+  }
+
+  function showPokemon(data) {
+    if (pokedexTimeout) clearTimeout(pokedexTimeout);
+
+    numberEl.textContent = '#' + String(data.id).padStart(3, '0');
+    nameEl.textContent   = data.name;
+    trigEl.textContent   = '🔴 lanzado por @' + data.triggeredBy;
+
+    loadSprite(data);
+
+    typesEl.innerHTML = '';
+    data.types.split('/').forEach(type => {
+      const badge = document.createElement('span');
+      badge.className = 'type-badge';
+      badge.textContent = type;
+      badge.style.background = TYPE_COLORS[type.toLowerCase()] || '#999';
+      typesEl.appendChild(badge);
+    });
+
+    [
+      { bar:'bar-hp',  val:'val-hp',  value: data.stats.hp },
+      { bar:'bar-atk', val:'val-atk', value: data.stats.attack },
+      { bar:'bar-def', val:'val-def', value: data.stats.defense },
+      { bar:'bar-spd', val:'val-spd', value: data.stats.speed },
+    ].forEach(s => {
+      document.getElementById(s.val).textContent = s.value;
+      const fill = document.getElementById(s.bar);
+      fill.style.width = '0%';
+      setTimeout(() => { fill.style.width = Math.min(100, (s.value / 255) * 100) + '%'; }, 400);
+    });
+
+    pokedexPanel.style.display = 'block';
+    pokedexPanel.style.animation = 'slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+    try {
+      cry.src = data.cryUrl;
+      cry.volume = 0.6;
+      cry.play().catch(() => {});
+    } catch(e) {}
+
+    pokedexTimeout = setTimeout(() => {
+      pokedexPanel.style.animation = 'slideOut 0.4s ease forwards';
+      setTimeout(() => { pokedexPanel.style.display = 'none'; }, 400);
+    }, 12000);
+  }
+
+  // ── MEDIA GENÉRICA (anime, gifs, etc) ────────────────
+
+  const mediaPanel    = document.getElementById('media-panel');
+  const mediaTitle    = document.getElementById('media-title');
+  const mediaTriggered = document.getElementById('media-triggered');
+  const mediaHeader   = document.getElementById('media-header');
+  const mediaGif      = document.getElementById('media-gif');
+  let mediaTimeout    = null;
+
+  function showMedia(data) {
+    if (mediaTimeout) clearTimeout(mediaTimeout);
+
+    mediaTitle.textContent    = data.title;
+    mediaTriggered.textContent = '🎮 invocado por @' + data.triggeredBy;
+    mediaGif.src              = data.mediaUrl;
+
+    // Color de acento del borde del panel
+    const color = data.accentColor || '#e53935';
+    mediaPanel.style.border = '3px solid ' + color;
+    mediaPanel.style.boxShadow = `0 0 30px ${color}80`;
+    mediaHeader.style.borderBottom = '2px solid ' + color;
+
+    mediaPanel.style.display   = 'block';
+    mediaPanel.style.animation = 'slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+    // Sonido opcional
+    if (data.soundUrl && data.soundUrl.length > 0) {
+      try {
+        const snd = new Audio(data.soundUrl);
+        snd.volume = 0.6;
+        snd.play().catch(() => {});
+      } catch(e) {}
+    }
+
+    const duration = (data.durationSeconds || 8) * 1000;
+    mediaTimeout = setTimeout(() => {
+      mediaPanel.style.animation = 'slideOutRight 0.4s ease forwards';
+      setTimeout(() => { mediaPanel.style.display = 'none'; }, 400);
+    }, duration);
+  }
+
+  // ── WEBSOCKET ─────────────────────────────────────────
+
+  function connectWebSocket() {
+    const ws = new WebSocket('ws://localhost:8765');
+
+    ws.onopen    = () => console.log('Overlay conectado al bot ✅');
+    ws.onclose   = () => {
+      console.log('WebSocket cerrado, reconectando en 3s...');
+      setTimeout(connectWebSocket, 3000);
+    };
+    ws.onerror   = (e) => console.error('WebSocket error', e);
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'pokedex') showPokemon(data);
+        if (data.type === 'media')   showMedia(data);   // ← naruto, goku, etc
+      } catch(err) {
+        console.error('Error parseando mensaje', err);
+      }
+    };
+  }
+
+  connectWebSocket();
+</script>
+</body>
+</html>
