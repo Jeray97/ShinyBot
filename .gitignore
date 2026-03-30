@@ -21,8 +21,6 @@ build/
 *.env
 *.log
 *.db
-.gitignore
-
 
 # ----------------------
 # IntelliJ IDEA

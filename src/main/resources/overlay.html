@@ -28,7 +28,7 @@
     }
     /* ── MEDIA ── */
     #media-panel {
-      position: absolute; bottom: 40px; right: 40px; width: 380px;
+      position: absolute; bottom: 40px; left: 40px; width: 380px;
       background: rgba(10,10,10,0.92); border-radius: 20px;
       padding: 16px; display: none;
       box-shadow: 0 0 30px rgba(0,0,0,0.6);
@@ -240,7 +240,7 @@
     mediaHeader.style.borderBottom = '2px solid ' + color;
 
     mediaPanel.style.display   = 'block';
-    mediaPanel.style.animation = 'slideInRight 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
+    mediaPanel.style.animation = 'slideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
 
     if (data.soundUrl && data.soundUrl.length > 0) {
       try {
@@ -252,7 +252,7 @@
 
     const duration = (data.durationSeconds || 8) * 1000;
     setTimeout(() => {
-      mediaPanel.style.animation = 'slideOutRight 0.4s ease forwards';
+      mediaPanel.style.animation = 'slideOut 0.4s ease forwards';
       setTimeout(() => {
         mediaPanel.style.display = 'none';
         onEventFinished(); // ← avisa a la cola
