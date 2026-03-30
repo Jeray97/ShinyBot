@@ -3,6 +3,7 @@ package com.soulshinygame.bot;
 import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
+import com.soulshinygame.bot.battle.BattleSystem;
 import com.soulshinygame.bot.commands.CommandRegistry;
 import com.soulshinygame.bot.commands.MediaCommandsLoader;
 import com.soulshinygame.bot.commands.impl.*;
@@ -73,6 +74,9 @@ public class Main {
 
         // Comandos de media desde media_commands.json (sin recompilar)
         new MediaCommandsLoader(overlayServer, db).loadInto(registry);
+
+        // Sistema de combate Pokémon (!retar, !aceptar, !atacar, !huir)
+        new BattleSystem(db).registerInto(registry);
 
         registry.start();
 
