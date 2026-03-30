@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "name": "Naruto Uzumaki",
+    "series": "Naruto",
+    "gifUrl": "https://media0.giphy.com/media/w7CP59oLYw6PK/giphy.gif",
+    "rarity": "comun",
+    "description": "Ninja de Konoha y futuro Hokage",
+    "accentColor": "#FF6B35",
+    "collectionType": "naruto",
+    "itemId": "naruto_uzumaki"
+  },
+  {
+    "id": 2,
+    "name": "Sasuke Uchiha",
+    "series": "Naruto",
+    "gifUrl": "https://media.giphy.com/media/tu-gif-sasuke.gif",
+    "rarity": "raro",
+    "description": "El último Uchiha",
+    "accentColor": "#7E57C2",
+    "collectionType": "naruto",
+    "itemId": "sasuke_uchiha"
+  },
+  {
+    "id": 3,
+    "name": "Goku",
+    "series": "Dragon Ball Z",
+    "gifUrl": "https://media.giphy.com/media/tu-gif-goku.gif",
+    "rarity": "epico",
+    "description": "El Saiyan más poderoso",
+    "accentColor": "#1565C0",
+    "collectionType": "dragonball",
+    "itemId": "goku"
+  },
+  {
+    "id": 4,
+    "name": "Levi Ackerman",
+    "series": "Attack on Titan",
+    "gifUrl": "https://media.giphy.com/media/tu-gif-levi.gif",
+    "rarity": "legendario",
+    "description": "El soldado más fuerte de la humanidad",
+    "accentColor": "#78909C",
+    "collectionType": "aot",
+    "itemId": "levi_ackerman"
+  }
+]

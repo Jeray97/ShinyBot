@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Pokédex Overlay</title>
+  <title>Overlay</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -19,60 +19,79 @@
       --ghost:#7E57C2; --steel:#78909C;
     }
 
+    /* ── ANIMACIONES ── */
+    @keyframes slideIn  { from{transform:translateX(-120%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes slideOut { from{transform:translateX(0);opacity:1}     to{transform:translateX(-120%);opacity:0} }
+    @keyframes blink    { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+
+    /* ── BASE PANEL (compartido por los 3 tipos) ── */
+    .overlay-panel {
+      position: absolute;
+      bottom: 40px; left: 40px;
+      border-radius: 20px;
+      padding: 20px;
+      display: none;
+      background: rgba(10,10,10,0.92);
+    }
+
     /* ── POKÉDEX ── */
     #pokedex-panel {
-      position: absolute; bottom: 40px; left: 40px; width: 480px;
-      background: rgba(10,10,10,0.92); border: 3px solid #e53935;
-      border-radius: 20px; padding: 20px; display: none;
+      width: 480px;
+      border: 3px solid #e53935;
       box-shadow: 0 0 30px rgba(229,57,53,0.5), inset 0 0 20px rgba(0,0,0,0.5);
     }
-    /* ── MEDIA ── */
-    #media-panel {
-      position: absolute; bottom: 40px; left: 40px; width: 380px;
-      background: rgba(10,10,10,0.92); border-radius: 20px;
-      padding: 16px; display: none;
-      box-shadow: 0 0 30px rgba(0,0,0,0.6);
-    }
-
-    @keyframes slideIn      { from{transform:translateX(-120%);opacity:0} to{transform:translateX(0);opacity:1} }
-    @keyframes slideInRight { from{transform:translateX(120%);opacity:0}  to{transform:translateX(0);opacity:1} }
-    @keyframes slideOut     { from{transform:translateX(0);opacity:1}     to{transform:translateX(-120%);opacity:0} }
-    @keyframes slideOutRight{ from{transform:translateX(0);opacity:1}     to{transform:translateX(120%);opacity:0} }
-
-    .media-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:10px; }
-    .media-title  { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#fff; }
-    .media-triggered { font-size:8px; color:#aaa; margin-top:4px; }
-    .media-img-wrapper { width:100%; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); }
-    #media-gif { width:100%; max-height:300px; object-fit:contain; border-radius:10px; }
-
     .pokedex-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; border-bottom:2px solid #e53935; padding-bottom:10px; }
-    .pokedex-light { width:18px; height:18px; border-radius:50%; background:#4fc3f7; box-shadow:0 0 10px #4fc3f7; animation:blink 1s infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    .pokedex-title { color:#e53935; font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+    .pokedex-light  { width:18px; height:18px; border-radius:50%; background:#4fc3f7; box-shadow:0 0 10px #4fc3f7; animation:blink 1s infinite; }
+    .pokedex-title  { color:#e53935; font-size:11px; letter-spacing:2px; text-transform:uppercase; }
     .pokedex-number { color:#666; font-size:10px; margin-left:auto; }
-    .pokemon-main { display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+    .pokemon-main   { display:flex; align-items:center; gap:16px; margin-bottom:14px; }
     .pokemon-sprite-wrapper { width:120px; height:120px; background:rgba(255,255,255,0.05); border-radius:12px; border:2px solid #333; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; overflow:hidden; }
     .pokemon-sprite-wrapper::before { content:''; position:absolute; inset:0; background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%); }
     #pokemon-sprite { width:100px; height:100px; image-rendering:pixelated; filter:drop-shadow(0 0 8px rgba(255,255,255,0.3)); animation:float 3s ease-in-out infinite; }
-    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-    .pokemon-info { flex:1; }
-    .pokemon-name { color:#fff; font-size:18px; text-shadow:0 0 10px rgba(255,255,255,0.3); margin-bottom:8px; }
-    .pokemon-types { display:flex; gap:6px; margin-bottom:8px; }
-    .type-badge { padding:3px 10px; border-radius:20px; font-size:8px; font-weight:bold; text-transform:uppercase; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+    .pokemon-info   { flex:1; }
+    .pokemon-name   { color:#fff; font-size:18px; text-shadow:0 0 10px rgba(255,255,255,0.3); margin-bottom:8px; }
+    .pokemon-types  { display:flex; gap:6px; margin-bottom:8px; }
+    .type-badge     { padding:3px 10px; border-radius:20px; font-size:8px; font-weight:bold; text-transform:uppercase; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
     .pokemon-triggered { color:#888; font-size:8px; }
-    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-    .stat-row { display:flex; flex-direction:column; gap:2px; }
-    .stat-label { color:#888; font-size:7px; text-transform:uppercase; letter-spacing:1px; }
+    .stats-grid     { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .stat-row       { display:flex; flex-direction:column; gap:2px; }
+    .stat-label     { color:#888; font-size:7px; text-transform:uppercase; letter-spacing:1px; }
     .stat-bar-wrapper { display:flex; align-items:center; gap:6px; }
-    .stat-bar { flex:1; height:6px; background:#222; border-radius:3px; overflow:hidden; }
-    .stat-bar-fill { height:100%; border-radius:3px; transition:width 0.8s ease; width:0%; }
-    .stat-value { color:#fff; font-size:8px; min-width:24px; text-align:right; }
+    .stat-bar       { flex:1; height:6px; background:#222; border-radius:3px; overflow:hidden; }
+    .stat-bar-fill  { height:100%; border-radius:3px; transition:width 0.8s ease; width:0%; }
+    .stat-value     { color:#fff; font-size:8px; min-width:24px; text-align:right; }
+
+    /* ── ANIME ── */
+    #anime-panel { width: 420px; }
+
+    .anime-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:10px; }
+    .anime-rarity-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+    .anime-name   { color:#fff; font-size:13px; letter-spacing:1px; }
+    .anime-series { color:#aaa; font-size:8px; margin-top:4px; }
+
+    .anime-gif-wrapper { width:100%; border-radius:12px; overflow:hidden; margin-bottom:10px; }
+    #anime-gif    { width:100%; max-height:260px; object-fit:contain; border-radius:10px; }
+
+    .anime-footer { display:flex; justify-content:space-between; align-items:center; }
+    .anime-rarity-badge { font-size:7px; padding:3px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:1px; color:#fff; }
+    .anime-triggered { color:#888; font-size:7px; }
+
+    /* ── MEDIA GENÉRICA ── */
+    #media-panel { width: 380px; }
+
+    .media-header    { display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:10px; }
+    .media-title     { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#fff; }
+    .media-triggered { font-size:8px; color:#aaa; margin-top:4px; }
+    .media-img-wrapper { width:100%; border-radius:12px; overflow:hidden; }
+    #media-gif { width:100%; max-height:300px; object-fit:contain; border-radius:10px; }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div id="pokedex-panel">
+<!-- Panel Pokédex -->
+<div id="pokedex-panel" class="overlay-panel">
   <div class="pokedex-header">
     <div class="pokedex-light"></div>
     <span class="pokedex-title">Pokédex</span>
@@ -96,10 +115,29 @@
   </div>
 </div>
 
-<div id="media-panel">
+<!-- Panel Anime -->
+<div id="anime-panel" class="overlay-panel">
+  <div class="anime-header" id="anime-header">
+    <div class="anime-rarity-dot" id="anime-rarity-dot"></div>
+    <div>
+      <div class="anime-name" id="anime-name">???</div>
+      <div class="anime-series" id="anime-series"></div>
+    </div>
+  </div>
+  <div class="anime-gif-wrapper">
+    <img id="anime-gif" src="" alt="anime">
+  </div>
+  <div class="anime-footer">
+    <span class="anime-rarity-badge" id="anime-rarity-badge"></span>
+    <span class="anime-triggered" id="anime-triggered"></span>
+  </div>
+</div>
+
+<!-- Panel Media genérica -->
+<div id="media-panel" class="overlay-panel">
   <div class="media-header" id="media-header">
     <div>
-      <div class="media-title" id="media-title">Título</div>
+      <div class="media-title" id="media-title"></div>
       <div class="media-triggered" id="media-triggered"></div>
     </div>
   </div>
@@ -119,9 +157,14 @@
     ghost:'#7986CB',steel:'#78909C'
   };
 
-  // ── COLA DE EVENTOS ────────────────────────────────────────────
-  // Todos los overlays pasan por aquí y se muestran de uno en uno.
-  // Si llegan varios a la vez, se encolan y salen ordenados.
+  const RARITY_COLORS = {
+    comun:      '#9E9E9E',
+    raro:       '#4FC3F7',
+    epico:      '#AB47BC',
+    legendario: '#FFD600'
+  };
+
+  // ── COLA DE EVENTOS ─────────────────────────────────────────────
 
   const eventQueue   = [];
   let isShowingEvent = false;
@@ -132,135 +175,126 @@
   }
 
   function processQueue() {
-    if (eventQueue.length === 0) {
-      isShowingEvent = false;
-      return;
-    }
+    if (eventQueue.length === 0) { isShowingEvent = false; return; }
     isShowingEvent = true;
     const data = eventQueue.shift();
     if (data.type === 'pokedex') showPokemon(data);
+    if (data.type === 'anime')   showAnime(data);
     if (data.type === 'media')   showMedia(data);
   }
 
-  // Llamar esto al terminar de mostrar cada overlay
   function onEventFinished() {
-    setTimeout(processQueue, 500); // 0.5s de pausa entre overlays
+    setTimeout(processQueue, 500);
   }
 
-  // ── POKÉDEX ────────────────────────────────────────────────────
+  function showPanel(panel, duration, onHide) {
+    panel.style.display   = 'block';
+    panel.style.animation = 'slideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
+    setTimeout(() => {
+      panel.style.animation = 'slideOut 0.4s ease forwards';
+      setTimeout(() => { panel.style.display = 'none'; onHide(); }, 400);
+    }, duration);
+  }
+
+  // ── POKÉDEX ─────────────────────────────────────────────────────
 
   const pokedexPanel = document.getElementById('pokedex-panel');
   const sprite       = document.getElementById('pokemon-sprite');
-  const nameEl       = document.getElementById('pokemon-name');
-  const numberEl     = document.getElementById('pokemon-number');
-  const typesEl      = document.getElementById('pokemon-types');
-  const trigEl       = document.getElementById('pokemon-triggered');
   const cry          = document.getElementById('pokemon-cry');
 
   function loadSprite(data) {
     const fallbacks = [
-      data.animatedUrl,
-      data.spriteUrl,
+      data.animatedUrl, data.spriteUrl,
       `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.id}.png`
     ].filter(u => u && u.length > 0);
-
     let idx = 0;
-    sprite.onerror = () => {
-      idx++;
-      if (idx < fallbacks.length) sprite.src = fallbacks[idx];
-      else sprite.style.display = 'none';
-    };
+    sprite.onerror = () => { idx++; if (idx < fallbacks.length) sprite.src = fallbacks[idx]; else sprite.style.display = 'none'; };
     sprite.style.display = 'block';
     sprite.src = fallbacks[0];
   }
 
   function showPokemon(data) {
-    numberEl.textContent = '#' + String(data.id).padStart(3, '0');
-    nameEl.textContent   = data.name;
-    trigEl.textContent   = '🔴 lanzado por @' + data.triggeredBy;
+    document.getElementById('pokemon-number').textContent = '#' + String(data.id).padStart(3,'0');
+    document.getElementById('pokemon-name').textContent   = data.name;
+    document.getElementById('pokemon-triggered').textContent = '🔴 lanzado por @' + data.triggeredBy;
     loadSprite(data);
 
+    const typesEl = document.getElementById('pokemon-types');
     typesEl.innerHTML = '';
     data.types.split('/').forEach(type => {
-      const badge = document.createElement('span');
-      badge.className = 'type-badge';
-      badge.textContent = type;
-      badge.style.background = TYPE_COLORS[type.toLowerCase()] || '#999';
-      typesEl.appendChild(badge);
+      const b = document.createElement('span');
+      b.className = 'type-badge';
+      b.textContent = type;
+      b.style.background = TYPE_COLORS[type.toLowerCase()] || '#999';
+      typesEl.appendChild(b);
     });
 
-    [
-      {bar:'bar-hp',  val:'val-hp',  v:data.stats.hp},
-      {bar:'bar-atk', val:'val-atk', v:data.stats.attack},
-      {bar:'bar-def', val:'val-def', v:data.stats.defense},
-      {bar:'bar-spd', val:'val-spd', v:data.stats.speed},
-    ].forEach(s => {
-      document.getElementById(s.val).textContent = s.v;
-      const fill = document.getElementById(s.bar);
-      fill.style.width = '0%';
-      setTimeout(() => { fill.style.width = Math.min(100,(s.v/255)*100)+'%'; }, 400);
-    });
+    [{bar:'bar-hp',val:'val-hp',v:data.stats.hp},{bar:'bar-atk',val:'val-atk',v:data.stats.attack},
+      {bar:'bar-def',val:'val-def',v:data.stats.defense},{bar:'bar-spd',val:'val-spd',v:data.stats.speed}]
+            .forEach(s => {
+              document.getElementById(s.val).textContent = s.v;
+              const fill = document.getElementById(s.bar);
+              fill.style.width = '0%';
+              setTimeout(() => { fill.style.width = Math.min(100,(s.v/255)*100)+'%'; }, 400);
+            });
 
-    pokedexPanel.style.display   = 'block';
-    pokedexPanel.style.animation = 'slideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
+    try { cry.src = data.cryUrl; cry.volume = 0.2; cry.play().catch(()=>{}); } catch(e) {}
 
-    // Volumen reducido al 20%
-    try {
-      cry.src    = data.cryUrl;
-      cry.volume = 0.2;
-      cry.play().catch(() => {});
-    } catch(e) {}
-
-    const duration = 12000;
-    setTimeout(() => {
-      pokedexPanel.style.animation = 'slideOut 0.4s ease forwards';
-      setTimeout(() => {
-        pokedexPanel.style.display = 'none';
-        onEventFinished(); // ← avisa a la cola
-      }, 400);
-    }, duration);
+    showPanel(pokedexPanel, 12000, onEventFinished);
   }
 
-  // ── MEDIA GENÉRICA ─────────────────────────────────────────────
+  // ── ANIME ───────────────────────────────────────────────────────
 
-  const mediaPanel     = document.getElementById('media-panel');
-  const mediaTitle     = document.getElementById('media-title');
-  const mediaTriggered = document.getElementById('media-triggered');
-  const mediaHeader    = document.getElementById('media-header');
-  const mediaGif       = document.getElementById('media-gif');
+  const animePanel = document.getElementById('anime-panel');
+
+  function showAnime(data) {
+    document.getElementById('anime-name').textContent    = data.name;
+    document.getElementById('anime-series').textContent  = data.series;
+    document.getElementById('anime-triggered').textContent = '🎮 invocado por @' + data.triggeredBy;
+
+    const rarity      = data.rarity || 'comun';
+    const rarityColor = RARITY_COLORS[rarity] || '#9E9E9E';
+
+    document.getElementById('anime-rarity-dot').style.background   = rarityColor;
+    document.getElementById('anime-rarity-dot').style.boxShadow    = `0 0 8px ${rarityColor}`;
+    document.getElementById('anime-rarity-badge').textContent      = rarity;
+    document.getElementById('anime-rarity-badge').style.background = rarityColor + '33';
+    document.getElementById('anime-rarity-badge').style.color      = rarityColor;
+    document.getElementById('anime-rarity-badge').style.border     = `1px solid ${rarityColor}`;
+
+    const header = document.getElementById('anime-header');
+    header.style.borderBottom = `2px solid ${rarityColor}`;
+    animePanel.style.border      = `3px solid ${rarityColor}`;
+    animePanel.style.boxShadow   = `0 0 30px ${rarityColor}50`;
+
+    document.getElementById('anime-gif').src = data.gifUrl;
+
+    showPanel(animePanel, 10000, onEventFinished);
+  }
+
+  // ── MEDIA GENÉRICA ──────────────────────────────────────────────
+
+  const mediaPanel = document.getElementById('media-panel');
 
   function showMedia(data) {
-    mediaTitle.textContent     = data.title;
-    mediaTriggered.textContent = '🎮 invocado por @' + data.triggeredBy;
-    mediaGif.src               = data.mediaUrl;
+    document.getElementById('media-title').textContent     = data.title;
+    document.getElementById('media-triggered').textContent = '🎮 invocado por @' + data.triggeredBy;
+    document.getElementById('media-gif').src               = data.mediaUrl;
 
     const color = data.accentColor || '#e53935';
-    mediaPanel.style.border        = '3px solid ' + color;
-    mediaPanel.style.boxShadow     = `0 0 30px ${color}80`;
-    mediaHeader.style.borderBottom = '2px solid ' + color;
-
-    mediaPanel.style.display   = 'block';
-    mediaPanel.style.animation = 'slideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
+    mediaPanel.style.border                                        = '3px solid ' + color;
+    mediaPanel.style.boxShadow                                     = `0 0 30px ${color}80`;
+    document.getElementById('media-header').style.borderBottom     = '2px solid ' + color;
 
     if (data.soundUrl && data.soundUrl.length > 0) {
-      try {
-        const snd = new Audio(data.soundUrl);
-        snd.volume = 0.2; // ← mismo volumen reducido
-        snd.play().catch(() => {});
-      } catch(e) {}
+      try { const s = new Audio(data.soundUrl); s.volume = 0.2; s.play().catch(()=>{}); } catch(e) {}
     }
 
     const duration = (data.durationSeconds || 8) * 1000;
-    setTimeout(() => {
-      mediaPanel.style.animation = 'slideOut 0.4s ease forwards';
-      setTimeout(() => {
-        mediaPanel.style.display = 'none';
-        onEventFinished(); // ← avisa a la cola
-      }, 400);
-    }, duration);
+    showPanel(mediaPanel, duration, onEventFinished);
   }
 
-  // ── WEBSOCKET ──────────────────────────────────────────────────
+  // ── WEBSOCKET ───────────────────────────────────────────────────
 
   function connectWebSocket() {
     const ws = new WebSocket('ws://localhost:8765');
@@ -268,12 +302,8 @@
     ws.onclose   = () => { console.log('Reconectando en 3s...'); setTimeout(connectWebSocket, 3000); };
     ws.onerror   = (e) => console.error('WebSocket error', e);
     ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        enqueue(data);
-      } catch(err) {
-        console.error('Error parseando mensaje', err);
-      }
+      try { enqueue(JSON.parse(e.data)); }
+      catch(err) { console.error('Error parseando mensaje', err); }
     };
   }
 
