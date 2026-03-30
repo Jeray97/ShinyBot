@@ -1,0 +1,18 @@
+[
+  {
+    "name": "redes_sociales",
+    "intervalMinutes": 20,
+    "messages": [
+      "¡Sígueme en Twitter/X! → https://twitter.com/soulshinygame 🐦",
+      "¡Suscríbete a mi canal de YouTube! → https://youtube.com/@soulshinygame 🎥",
+      "¡Únete a mi Discord! → https://discord.gg/tuinvitacion 💬"
+    ]
+  },
+  {
+    "name": "reglas",
+    "intervalMinutes": 30,
+    "messages": [
+      "📋 Recuerda las reglas del canal: respeto ante todo, sin spam y ¡a pasarlo bien!"
+    ]
+  }
+]

@@ -31,6 +31,8 @@ public class CommandRegistry {
         this.channel = channel;
     }
 
+    // !pokemon.pokedex
+
     /** Registra un nuevo comando. Llamar desde Main.java. */
     public CommandRegistry register(Command command) {
         commands.put(command.getName().toLowerCase(), command);

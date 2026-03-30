@@ -21,6 +21,8 @@ build/
 *.env
 *.log
 *.db
+.gitignore
+
 
 # ----------------------
 # IntelliJ IDEA
@@ -47,6 +49,7 @@ out/
 .springBeans
 .sts4-cache
 bin/
+
 
 # ----------------------
 # NetBeans

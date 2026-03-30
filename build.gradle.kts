@@ -34,8 +34,8 @@ tasks.jar {
         attributes["Main-Class"] = "com.soulshinygame.bot.Main"
     }
 
-    archiveBaseName.set("ShinyBot")
-    archiveVersion.set("1.0")
+    archiveBaseName.set("shinybot")
+    archiveVersion.set("")
     destinationDirectory.set(file("$rootDir/ejecutables"))
 
     from(configurations.runtimeClasspath.get().map {

@@ -1,0 +1,26 @@
+[
+  {
+    "command": "naruto",
+    "title": "¡Naruto apareció!",
+    "chatMessage": "@{user} invocó a Naruto! 🍥",
+    "mediaUrl": "https://media0.giphy.com/media/w7CP59oLYw6PK/giphy.gif",
+    "accentColor": "#FF6B35",
+    "durationSeconds": 8,
+    "cooldownSeconds": 20,
+    "collectionType": "naruto",
+    "itemId": "naruto",
+    "itemName": "Naruto Uzumaki"
+  },
+  {
+    "command": "goku",
+    "title": "¡Goku está aquí!",
+    "chatMessage": "@{user} llamó a Goku! 🔥",
+    "mediaUrl": "https://media.giphy.com/media/tu-gif-de-goku.gif",
+    "accentColor": "#1565C0",
+    "durationSeconds": 10,
+    "cooldownSeconds": 30,
+    "collectionType": "dragonball",
+    "itemId": "goku",
+    "itemName": "Goku"
+  }
+]

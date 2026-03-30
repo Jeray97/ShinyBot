@@ -32,13 +32,12 @@ public class PokedexCommand implements Command {
     public String getName() { return "pokedex"; }
 
     @Override
-    public long getCooldownMs() { return 30_000; } // 30s, gestionado por CommandRegistry
+    public long getCooldownMs() { return 30_000; }
 
     @Override
     public void execute(ChannelMessageEvent event, TwitchClient client, String channel) {
         String user = event.getUser().getName();
 
-        // Hilo normal compatible con Java 17+
         new Thread(() -> {
             try {
                 int pokemonId = random.nextInt(TOTAL_POKEMON) + 1;
@@ -51,11 +50,10 @@ public class PokedexCommand implements Command {
 
                 client.getChat().sendMessage(channel,
                         "🔴 @" + user + " lanzó la Pokédex... ¡Es un " +
-                                capitalize(pokemon.getName()) + " #" + pokemon.getId() + "!");
+                                pokemon.getNameEs() + " #" + pokemon.getId() + "!");
 
                 overlayServer.sendEvent(pokemon.toJson(user));
-
-                log.info("Pokédex lanzada por {}: {} #{}", user, pokemon.getName(), pokemon.getId());
+                log.info("Pokédex lanzada por {}: {} #{}", user, pokemon.getNameEs(), pokemon.getId());
 
             } catch (Exception e) {
                 log.error("Error en comando !pokedex", e);
@@ -64,27 +62,50 @@ public class PokedexCommand implements Command {
     }
 
     private PokemonData fetchPokemon(int id) throws IOException, InterruptedException {
-        String url = "https://pokeapi.co/api/v2/pokemon/" + id;
+        // Llamada 1: datos base del pokemon
+        String body = get("https://pokeapi.co/api/v2/pokemon/" + id);
+        if (body == null) return null;
 
+        // Llamada 2: nombre en español desde species
+        String speciesBody = get("https://pokeapi.co/api/v2/pokemon-species/" + id);
+        String nameEs = extractSpanishName(speciesBody);
+
+        return parseResponse(id, body, nameEs);
+    }
+
+    private String get(String url) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("User-Agent", "SoulShinyBot/1.0")
                 .GET()
                 .build();
-
-        HttpResponse<String> response = httpClient.send(request,
-                HttpResponse.BodyHandlers.ofString());
-
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            log.warn("PokéAPI respondió con {}", response.statusCode());
+            log.warn("API respondió {} para {}", response.statusCode(), url);
             return null;
         }
-
-        return parseResponse(id, response.body());
+        return response.body();
     }
 
-    private PokemonData parseResponse(int id, String json) {
-        String name   = extractString(json, "\"name\":\"", "\"", 0);
+    /**
+     * Extrae el nombre en español del JSON de pokemon-species.
+     * El JSON tiene un array "names" con objetos {"name":"...","language":{"name":"es",...}}
+     */
+    private String extractSpanishName(String json) {
+        if (json == null) return null;
+        try {
+            // Buscamos el bloque donde language.name es "es"
+            Pattern p = Pattern.compile("\"name\":\"([^\"]+)\",\"language\":\\{\"name\":\"es\"");
+            Matcher m = p.matcher(json);
+            if (m.find()) return m.group(1);
+        } catch (Exception e) {
+            log.warn("No se pudo extraer nombre en español");
+        }
+        return null;
+    }
+
+    private PokemonData parseResponse(int id, String json, String nameEs) {
+        String nameEn = extractString(json, "\"name\":\"", "\"", 0);
         int hp        = extractStat(json, "hp");
         int attack    = extractStat(json, "attack");
         int defense   = extractStat(json, "defense");
@@ -98,14 +119,16 @@ public class PokedexCommand implements Command {
         String spritesSection = extractBlock(json, "\"sprites\":");
         String spriteUrl = extractString(spritesSection, "\"front_default\":\"", "\"", 0);
 
-        String animatedUrl = extractString(spritesSection,
-                "\"animated\":{\"back_default", "front_default\":\"", 0);
+        String animatedUrl = extractString(spritesSection, "\"animated\":{\"back_default", "front_default\":\"", 0);
         animatedUrl = extractString(animatedUrl, "\"", "\"", 0);
         if (animatedUrl.isEmpty()) animatedUrl = spriteUrl;
 
         String cryUrl = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/" + id + ".ogg";
 
-        return new PokemonData(id, name, type1, type2,
+        // Si no hay nombre en español, usar el inglés capitalizado
+        String finalName = (nameEs != null && !nameEs.isEmpty()) ? nameEs : capitalize(nameEn);
+
+        return new PokemonData(id, nameEn, finalName, type1, type2,
                 hp, attack, defense, speed,
                 spriteUrl, animatedUrl, cryUrl);
     }
@@ -115,18 +138,14 @@ public class PokedexCommand implements Command {
             int start = text.indexOf(startMarker, fromIndex) + startMarker.length();
             int end = text.indexOf(endMarker, start);
             return text.substring(start, end);
-        } catch (Exception e) {
-            return "";
-        }
+        } catch (Exception e) { return ""; }
     }
 
     private String extractBlock(String text, String marker) {
         try {
             int start = text.indexOf(marker) + marker.length();
             return text.substring(start, Math.min(start + 2000, text.length()));
-        } catch (Exception e) {
-            return "";
-        }
+        } catch (Exception e) { return ""; }
     }
 
     private int extractStat(String json, String statName) {
@@ -134,9 +153,7 @@ public class PokedexCommand implements Command {
             Pattern p = Pattern.compile("\"base_stat\":(\\d+)[^}]+\"name\":\"" + statName + "\"");
             Matcher m = p.matcher(json);
             if (m.find()) return Integer.parseInt(m.group(1));
-        } catch (Exception e) {
-            log.warn("No se pudo extraer stat: {}", statName);
-        }
+        } catch (Exception e) { log.warn("No se pudo extraer stat: {}", statName); }
         return 0;
     }
 
