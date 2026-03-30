@@ -8,6 +8,7 @@ import com.soulshinygame.bot.commands.MediaCommandsLoader;
 import com.soulshinygame.bot.commands.impl.*;
 import com.soulshinygame.bot.database.DatabaseManager;
 import com.soulshinygame.bot.moderation.ModerationHandler;
+import com.soulshinygame.bot.overlay.AnimeCommand;
 import com.soulshinygame.bot.overlay.OverlayHttpServer;
 import com.soulshinygame.bot.overlay.PokedexCommand;
 import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
@@ -67,7 +68,8 @@ public class Main {
                 .register(new PuntosCommand(db))
                 .register(new DadosCommand(db))
                 .register(new ColeccionCommand(db))
-                .register(new PokedexCommand(overlayServer));
+                .register(new PokedexCommand(overlayServer))
+                .register(new AnimeCommand(overlayServer, db));
 
         // Comandos de media desde media_commands.json (sin recompilar)
         new MediaCommandsLoader(overlayServer, db).loadInto(registry);
