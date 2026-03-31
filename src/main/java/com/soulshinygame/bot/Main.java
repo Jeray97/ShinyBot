@@ -76,7 +76,7 @@ public class Main {
         new MediaCommandsLoader(overlayServer, db).loadInto(registry);
 
         // Sistema de combate Pokémon (!retar, !aceptar, !atacar, !huir)
-        new BattleSystem(db).registerInto(registry);
+        new BattleSystem(db, overlayServer).registerInto(registry);
 
         registry.start();
 

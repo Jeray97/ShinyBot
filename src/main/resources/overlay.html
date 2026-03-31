@@ -12,85 +12,182 @@
       font-family: 'Press Start 2P', 'Courier New', monospace;
     }
     :root {
-      --fire:#FF6B35; --water:#4FC3F7; --grass:#66BB6A; --electric:#FFD600;
-      --psychic:#F06292; --ice:#80DEEA; --dragon:#7E57C2; --dark:#5D4037;
-      --fairy:#F48FB1; --normal:#9E9E9E; --fighting:#EF5350; --flying:#90CAF9;
-      --poison:#AB47BC; --ground:#FFCA28; --rock:#BCAAA4; --bug:#AED581;
-      --ghost:#7E57C2; --steel:#78909C;
+      --fire:#FF6B35;--water:#4FC3F7;--grass:#66BB6A;--electric:#FFD600;
+      --psychic:#F06292;--ice:#80DEEA;--dragon:#7E57C2;--dark:#5D4037;
+      --fairy:#F48FB1;--normal:#9E9E9E;--fighting:#EF5350;--flying:#90CAF9;
+      --poison:#AB47BC;--ground:#FFCA28;--rock:#BCAAA4;--bug:#AED581;
+      --ghost:#7E57C2;--steel:#78909C;
     }
 
-    /* ── ANIMACIONES ── */
-    @keyframes slideIn  { from{transform:translateX(-120%);opacity:0} to{transform:translateX(0);opacity:1} }
-    @keyframes slideOut { from{transform:translateX(0);opacity:1}     to{transform:translateX(-120%);opacity:0} }
-    @keyframes blink    { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    @keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    /* ── ANIMACIONES GLOBALES ── */
+    @keyframes slideIn       { from{transform:translateX(-120%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes slideOut      { from{transform:translateX(0);opacity:1}     to{transform:translateX(-120%);opacity:0} }
+    @keyframes blink         { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes float         { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes shake         { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+    @keyframes dmgFloat      { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-60px) scale(1.4)} }
+    @keyframes battleSlideIn { from{transform:translateY(120%);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes battleSlideOut{ from{transform:translateY(0);opacity:1}    to{transform:translateY(120%);opacity:0} }
+    @keyframes victoryPulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    @keyframes gifFlash      { 0%,100%{opacity:0} 10%,90%{opacity:1} }
 
-    /* ── BASE PANEL (compartido por los 3 tipos) ── */
+    /* ── BASE PANELES ── */
     .overlay-panel {
-      position: absolute;
-      bottom: 40px; left: 40px;
-      border-radius: 20px;
-      padding: 20px;
-      display: none;
+      position: absolute; bottom: 40px; left: 40px;
+      border-radius: 20px; padding: 20px; display: none;
       background: rgba(10,10,10,0.92);
     }
 
     /* ── POKÉDEX ── */
-    #pokedex-panel {
-      width: 480px;
-      border: 3px solid #e53935;
-      box-shadow: 0 0 30px rgba(229,57,53,0.5), inset 0 0 20px rgba(0,0,0,0.5);
-    }
-    .pokedex-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; border-bottom:2px solid #e53935; padding-bottom:10px; }
-    .pokedex-light  { width:18px; height:18px; border-radius:50%; background:#4fc3f7; box-shadow:0 0 10px #4fc3f7; animation:blink 1s infinite; }
-    .pokedex-title  { color:#e53935; font-size:11px; letter-spacing:2px; text-transform:uppercase; }
-    .pokedex-number { color:#666; font-size:10px; margin-left:auto; }
-    .pokemon-main   { display:flex; align-items:center; gap:16px; margin-bottom:14px; }
-    .pokemon-sprite-wrapper { width:120px; height:120px; background:rgba(255,255,255,0.05); border-radius:12px; border:2px solid #333; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; overflow:hidden; }
-    .pokemon-sprite-wrapper::before { content:''; position:absolute; inset:0; background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%); }
-    #pokemon-sprite { width:100px; height:100px; image-rendering:pixelated; filter:drop-shadow(0 0 8px rgba(255,255,255,0.3)); animation:float 3s ease-in-out infinite; }
+    #pokedex-panel { width:480px; border:3px solid #e53935; box-shadow:0 0 30px rgba(229,57,53,0.5),inset 0 0 20px rgba(0,0,0,0.5); }
+    .pokedex-header { display:flex;align-items:center;gap:10px;margin-bottom:14px;border-bottom:2px solid #e53935;padding-bottom:10px; }
+    .pokedex-light  { width:18px;height:18px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 10px #4fc3f7;animation:blink 1s infinite; }
+    .pokedex-title  { color:#e53935;font-size:11px;letter-spacing:2px;text-transform:uppercase; }
+    .pokedex-number { color:#666;font-size:10px;margin-left:auto; }
+    .pokemon-main   { display:flex;align-items:center;gap:16px;margin-bottom:14px; }
+    .pokemon-sprite-wrapper { width:120px;height:120px;background:rgba(255,255,255,0.05);border-radius:12px;border:2px solid #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden; }
+    .pokemon-sprite-wrapper::before { content:'';position:absolute;inset:0;background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%); }
+    #pokemon-sprite { width:100px;height:100px;image-rendering:pixelated;filter:drop-shadow(0 0 8px rgba(255,255,255,0.3));animation:float 3s ease-in-out infinite; }
     .pokemon-info   { flex:1; }
-    .pokemon-name   { color:#fff; font-size:18px; text-shadow:0 0 10px rgba(255,255,255,0.3); margin-bottom:8px; }
-    .pokemon-types  { display:flex; gap:6px; margin-bottom:8px; }
-    .type-badge     { padding:3px 10px; border-radius:20px; font-size:8px; font-weight:bold; text-transform:uppercase; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
-    .pokemon-triggered { color:#888; font-size:8px; }
-    .stats-grid     { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-    .stat-row       { display:flex; flex-direction:column; gap:2px; }
-    .stat-label     { color:#888; font-size:7px; text-transform:uppercase; letter-spacing:1px; }
-    .stat-bar-wrapper { display:flex; align-items:center; gap:6px; }
-    .stat-bar       { flex:1; height:6px; background:#222; border-radius:3px; overflow:hidden; }
-    .stat-bar-fill  { height:100%; border-radius:3px; transition:width 0.8s ease; width:0%; }
-    .stat-value     { color:#fff; font-size:8px; min-width:24px; text-align:right; }
+    .pokemon-name   { color:#fff;font-size:18px;text-shadow:0 0 10px rgba(255,255,255,0.3);margin-bottom:8px; }
+    .pokemon-types  { display:flex;gap:6px;margin-bottom:8px; }
+    .type-badge     { padding:3px 10px;border-radius:20px;font-size:8px;font-weight:bold;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+    .pokemon-triggered { color:#888;font-size:8px; }
+    .stats-grid     { display:grid;grid-template-columns:1fr 1fr;gap:6px; }
+    .stat-row       { display:flex;flex-direction:column;gap:2px; }
+    .stat-label     { color:#888;font-size:7px;text-transform:uppercase;letter-spacing:1px; }
+    .stat-bar-wrapper { display:flex;align-items:center;gap:6px; }
+    .stat-bar       { flex:1;height:6px;background:#222;border-radius:3px;overflow:hidden; }
+    .stat-bar-fill  { height:100%;border-radius:3px;transition:width 0.8s ease;width:0%; }
+    .stat-value     { color:#fff;font-size:8px;min-width:24px;text-align:right; }
 
     /* ── ANIME ── */
-    #anime-panel { width: 420px; }
+    #anime-panel { width:420px; }
+    .anime-header { display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px; }
+    .anime-rarity-dot { width:14px;height:14px;border-radius:50%;flex-shrink:0; }
+    .anime-name   { color:#fff;font-size:13px;letter-spacing:1px; }
+    .anime-series { color:#aaa;font-size:8px;margin-top:4px; }
+    .anime-gif-wrapper { width:100%;border-radius:12px;overflow:hidden;margin-bottom:10px; }
+    #anime-gif    { width:100%;max-height:260px;object-fit:contain;border-radius:10px; }
+    .anime-footer { display:flex;justify-content:space-between;align-items:center; }
+    .anime-rarity-badge { font-size:7px;padding:3px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;color:#fff; }
+    .anime-triggered { color:#888;font-size:7px; }
 
-    .anime-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:10px; }
-    .anime-rarity-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
-    .anime-name   { color:#fff; font-size:13px; letter-spacing:1px; }
-    .anime-series { color:#aaa; font-size:8px; margin-top:4px; }
+    /* ── MEDIA ── */
+    #media-panel { width:380px; }
+    .media-header { display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:10px; }
+    .media-title  { font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#fff; }
+    .media-triggered { font-size:8px;color:#aaa;margin-top:4px; }
+    .media-img-wrapper { width:100%;border-radius:12px;overflow:hidden; }
+    #media-gif    { width:100%;max-height:300px;object-fit:contain;border-radius:10px; }
 
-    .anime-gif-wrapper { width:100%; border-radius:12px; overflow:hidden; margin-bottom:10px; }
-    #anime-gif    { width:100%; max-height:260px; object-fit:contain; border-radius:10px; }
+    /* ── BATTLE PANEL ── */
+    #battle-panel {
+      position: absolute;
+      bottom: 40px; left: 40px;
+      width: 560px;
+      background: rgba(8,8,8,0.95);
+      border: 3px solid #e53935;
+      border-radius: 20px;
+      padding: 18px;
+      display: none;
+      box-shadow: 0 0 40px rgba(229,57,53,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+    }
+    #battle-panel.shake { animation: shake 0.4s ease; }
 
-    .anime-footer { display:flex; justify-content:space-between; align-items:center; }
-    .anime-rarity-badge { font-size:7px; padding:3px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:1px; color:#fff; }
-    .anime-triggered { color:#888; font-size:7px; }
+    /* Cabecera battle */
+    .battle-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 2px solid #e53935;
+    }
+    .battle-title { color:#e53935; font-size:10px; letter-spacing:3px; text-transform:uppercase; flex:1; }
+    .battle-turn  { color:#FFD600; font-size:8px; }
 
-    /* ── MEDIA GENÉRICA ── */
-    #media-panel { width: 380px; }
+    /* Jugadores */
+    .battle-players { display:flex; gap:12px; margin-bottom:14px; }
 
-    .media-header    { display:flex; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:10px; }
-    .media-title     { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#fff; }
-    .media-triggered { font-size:8px; color:#aaa; margin-top:4px; }
-    .media-img-wrapper { width:100%; border-radius:12px; overflow:hidden; }
-    #media-gif { width:100%; max-height:300px; object-fit:contain; border-radius:10px; }
+    .battle-player {
+      flex: 1; background: rgba(255,255,255,0.04);
+      border-radius: 12px; padding: 10px;
+      border: 2px solid transparent;
+      transition: border-color 0.3s;
+      position: relative;
+    }
+    .battle-player.active-turn { border-color: #FFD600; box-shadow: 0 0 10px rgba(255,214,0,0.3); }
+    .battle-player.damaged     { animation: shake 0.3s ease; }
+
+    .bp-sprite-wrap {
+      width: 70px; height: 70px;
+      margin: 0 auto 8px;
+      display: flex; align-items:center; justify-content:center;
+    }
+    .bp-sprite { width:64px; height:64px; image-rendering:pixelated; filter:drop-shadow(0 0 6px rgba(255,255,255,0.2)); }
+    .bp-name   { color:#fff; font-size:8px; text-align:center; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bp-user   { color:#aaa; font-size:6px; text-align:center; margin-bottom:8px; }
+
+    .bp-hp-label { display:flex; justify-content:space-between; margin-bottom:3px; }
+    .bp-hp-text  { color:#aaa; font-size:6px; }
+    .bp-hp-val   { color:#fff; font-size:6px; }
+    .bp-hp-bar   { height:8px; background:#1a1a1a; border-radius:4px; overflow:hidden; border:1px solid #333; }
+    .bp-hp-fill  { height:100%; border-radius:4px; transition: width 0.6s ease, background 0.3s; }
+
+    /* Número de daño flotante */
+    .dmg-number {
+      position: absolute; top: 10px; right: 10px;
+      color: #FF4444; font-size: 14px;
+      text-shadow: 0 0 10px rgba(255,68,68,0.8), 2px 2px 0 #000;
+      animation: dmgFloat 1.2s ease forwards;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* GIF de ataque (centrado sobre el panel) */
+    #battle-attack-gif {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px; height: 150px;
+      object-fit: contain;
+      display: none;
+      z-index: 20;
+      filter: drop-shadow(0 0 20px rgba(255,200,0,0.8));
+      animation: gifFlash 1.5s ease forwards;
+    }
+
+    /* GIF de inicio (encima de todo) */
+    #battle-start-gif {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px; height: 200px;
+      object-fit: contain;
+      display: none;
+      z-index: 20;
+      animation: gifFlash 2s ease forwards;
+    }
+
+    /* Banner de victoria */
+    #battle-victory {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(135deg, rgba(255,214,0,0.15), rgba(255,100,0,0.15));
+      border-top: 2px solid #FFD600;
+      border-radius: 0 0 18px 18px;
+      padding: 10px;
+      display: none;
+      text-align: center;
+      animation: victoryPulse 1s ease infinite;
+    }
+    .victory-gif-wrap { margin-bottom:6px; }
+    #battle-victory-gif { height:60px; object-fit:contain; border-radius:8px; }
+    .victory-text { color:#FFD600; font-size:9px; letter-spacing:2px; }
+    .victory-sub  { color:#aaa; font-size:7px; margin-top:4px; }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<!-- Panel Pokédex -->
+<!-- ── POKÉDEX ── -->
 <div id="pokedex-panel" class="overlay-panel">
   <div class="pokedex-header">
     <div class="pokedex-light"></div>
@@ -98,9 +195,7 @@
     <span class="pokedex-number" id="pokemon-number">#000</span>
   </div>
   <div class="pokemon-main">
-    <div class="pokemon-sprite-wrapper">
-      <img id="pokemon-sprite" src="" alt="pokemon">
-    </div>
+    <div class="pokemon-sprite-wrapper"><img id="pokemon-sprite" src="" alt="pokemon"></div>
     <div class="pokemon-info">
       <div class="pokemon-name" id="pokemon-name">???</div>
       <div class="pokemon-types" id="pokemon-types"></div>
@@ -115,7 +210,7 @@
   </div>
 </div>
 
-<!-- Panel Anime -->
+<!-- ── ANIME ── -->
 <div id="anime-panel" class="overlay-panel">
   <div class="anime-header" id="anime-header">
     <div class="anime-rarity-dot" id="anime-rarity-dot"></div>
@@ -124,16 +219,14 @@
       <div class="anime-series" id="anime-series"></div>
     </div>
   </div>
-  <div class="anime-gif-wrapper">
-    <img id="anime-gif" src="" alt="anime">
-  </div>
+  <div class="anime-gif-wrapper"><img id="anime-gif" src="" alt="anime"></div>
   <div class="anime-footer">
     <span class="anime-rarity-badge" id="anime-rarity-badge"></span>
     <span class="anime-triggered" id="anime-triggered"></span>
   </div>
 </div>
 
-<!-- Panel Media genérica -->
+<!-- ── MEDIA ── -->
 <div id="media-panel" class="overlay-panel">
   <div class="media-header" id="media-header">
     <div>
@@ -141,14 +234,62 @@
       <div class="media-triggered" id="media-triggered"></div>
     </div>
   </div>
-  <div class="media-img-wrapper">
-    <img id="media-gif" src="" alt="media">
+  <div class="media-img-wrapper"><img id="media-gif" src="" alt="media"></div>
+</div>
+
+<!-- ── BATTLE ── -->
+<div id="battle-panel">
+
+  <div class="battle-header">
+    <span class="battle-title">⚔ Combate</span>
+    <span class="battle-turn" id="battle-turn"></span>
+  </div>
+
+  <div class="battle-players">
+    <!-- Jugador 1 -->
+    <div class="battle-player" id="bp1">
+      <div class="bp-sprite-wrap"><img class="bp-sprite" id="bp1-sprite" src="" alt=""></div>
+      <div class="bp-name" id="bp1-pokemon"></div>
+      <div class="bp-user" id="bp1-user"></div>
+      <div class="bp-hp-label">
+        <span class="bp-hp-text">HP</span>
+        <span class="bp-hp-val" id="bp1-hp-val">0/0</span>
+      </div>
+      <div class="bp-hp-bar"><div class="bp-hp-fill" id="bp1-hp-fill"></div></div>
+    </div>
+
+    <!-- Jugador 2 -->
+    <div class="battle-player" id="bp2">
+      <div class="bp-sprite-wrap"><img class="bp-sprite" id="bp2-sprite" src="" alt=""></div>
+      <div class="bp-name" id="bp2-pokemon"></div>
+      <div class="bp-user" id="bp2-user"></div>
+      <div class="bp-hp-label">
+        <span class="bp-hp-text">HP</span>
+        <span class="bp-hp-val" id="bp2-hp-val">0/0</span>
+      </div>
+      <div class="bp-hp-bar"><div class="bp-hp-fill" id="bp2-hp-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- GIF de ataque (aparece centrado durante el ataque) -->
+  <img id="battle-attack-gif" src="" alt="attack">
+
+  <!-- GIF de inicio -->
+  <img id="battle-start-gif" src="" alt="start">
+
+  <!-- Banner de victoria -->
+  <div id="battle-victory">
+    <div class="victory-gif-wrap"><img id="battle-victory-gif" src="" alt="victory"></div>
+    <div class="victory-text" id="victory-text">¡VICTORIA!</div>
+    <div class="victory-sub" id="victory-sub"></div>
   </div>
 </div>
 
 <audio id="pokemon-cry" preload="none"></audio>
 
 <script>
+  // ── CONSTANTES ─────────────────────────────────────────────────
+
   const TYPE_COLORS = {
     fire:'#FF6B35',water:'#4FC3F7',grass:'#66BB6A',electric:'#FFD600',
     psychic:'#F06292',ice:'#80DEEA',dragon:'#7E57C2',dark:'#5D4037',
@@ -156,15 +297,9 @@
     poison:'#AB47BC',ground:'#FFCA28',rock:'#BCAAA4',bug:'#AED581',
     ghost:'#7986CB',steel:'#78909C'
   };
+  const RARITY_COLORS = { comun:'#9E9E9E', raro:'#4FC3F7', epico:'#AB47BC', legendario:'#FFD600' };
 
-  const RARITY_COLORS = {
-    comun:      '#9E9E9E',
-    raro:       '#4FC3F7',
-    epico:      '#AB47BC',
-    legendario: '#FFD600'
-  };
-
-  // ── COLA DE EVENTOS ─────────────────────────────────────────────
+  // ── COLA DE EVENTOS (pokédex, anime, media — NO batalla) ────────
 
   const eventQueue   = [];
   let isShowingEvent = false;
@@ -183,9 +318,7 @@
     if (data.type === 'media')   showMedia(data);
   }
 
-  function onEventFinished() {
-    setTimeout(processQueue, 500);
-  }
+  function onEventFinished() { setTimeout(processQueue, 500); }
 
   function showPanel(panel, duration, onHide) {
     panel.style.display   = 'block';
@@ -203,43 +336,35 @@
   const cry          = document.getElementById('pokemon-cry');
 
   function loadSprite(data) {
-    const fallbacks = [
-      data.animatedUrl, data.spriteUrl,
+    const fb = [data.animatedUrl, data.spriteUrl,
       `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.id}.png`
     ].filter(u => u && u.length > 0);
     let idx = 0;
-    sprite.onerror = () => { idx++; if (idx < fallbacks.length) sprite.src = fallbacks[idx]; else sprite.style.display = 'none'; };
+    sprite.onerror = () => { idx++; if (idx < fb.length) sprite.src = fb[idx]; else sprite.style.display='none'; };
     sprite.style.display = 'block';
-    sprite.src = fallbacks[0];
+    sprite.src = fb[0];
   }
 
   function showPokemon(data) {
-    document.getElementById('pokemon-number').textContent = '#' + String(data.id).padStart(3,'0');
-    document.getElementById('pokemon-name').textContent   = data.name;
+    document.getElementById('pokemon-number').textContent  = '#' + String(data.id).padStart(3,'0');
+    document.getElementById('pokemon-name').textContent    = data.name;
     document.getElementById('pokemon-triggered').textContent = '🔴 lanzado por @' + data.triggeredBy;
     loadSprite(data);
-
     const typesEl = document.getElementById('pokemon-types');
     typesEl.innerHTML = '';
     data.types.split('/').forEach(type => {
-      const b = document.createElement('span');
-      b.className = 'type-badge';
-      b.textContent = type;
-      b.style.background = TYPE_COLORS[type.toLowerCase()] || '#999';
+      const b = document.createElement('span'); b.className = 'type-badge';
+      b.textContent = type; b.style.background = TYPE_COLORS[type.toLowerCase()] || '#999';
       typesEl.appendChild(b);
     });
-
     [{bar:'bar-hp',val:'val-hp',v:data.stats.hp},{bar:'bar-atk',val:'val-atk',v:data.stats.attack},
       {bar:'bar-def',val:'val-def',v:data.stats.defense},{bar:'bar-spd',val:'val-spd',v:data.stats.speed}]
             .forEach(s => {
               document.getElementById(s.val).textContent = s.v;
-              const fill = document.getElementById(s.bar);
-              fill.style.width = '0%';
+              const fill = document.getElementById(s.bar); fill.style.width='0%';
               setTimeout(() => { fill.style.width = Math.min(100,(s.v/255)*100)+'%'; }, 400);
             });
-
-    try { cry.src = data.cryUrl; cry.volume = 0.2; cry.play().catch(()=>{}); } catch(e) {}
-
+    try { cry.src=data.cryUrl; cry.volume=0.2; cry.play().catch(()=>{}); } catch(e) {}
     showPanel(pokedexPanel, 12000, onEventFinished);
   }
 
@@ -248,31 +373,24 @@
   const animePanel = document.getElementById('anime-panel');
 
   function showAnime(data) {
-    document.getElementById('anime-name').textContent    = data.name;
-    document.getElementById('anime-series').textContent  = data.series;
+    document.getElementById('anime-name').textContent     = data.name;
+    document.getElementById('anime-series').textContent   = data.series;
     document.getElementById('anime-triggered').textContent = '🎮 invocado por @' + data.triggeredBy;
-
-    const rarity      = data.rarity || 'comun';
-    const rarityColor = RARITY_COLORS[rarity] || '#9E9E9E';
-
-    document.getElementById('anime-rarity-dot').style.background   = rarityColor;
-    document.getElementById('anime-rarity-dot').style.boxShadow    = `0 0 8px ${rarityColor}`;
-    document.getElementById('anime-rarity-badge').textContent      = rarity;
-    document.getElementById('anime-rarity-badge').style.background = rarityColor + '33';
-    document.getElementById('anime-rarity-badge').style.color      = rarityColor;
-    document.getElementById('anime-rarity-badge').style.border     = `1px solid ${rarityColor}`;
-
-    const header = document.getElementById('anime-header');
-    header.style.borderBottom = `2px solid ${rarityColor}`;
-    animePanel.style.border      = `3px solid ${rarityColor}`;
-    animePanel.style.boxShadow   = `0 0 30px ${rarityColor}50`;
-
+    const r = data.rarity || 'comun', rc = RARITY_COLORS[r] || '#9E9E9E';
+    document.getElementById('anime-rarity-dot').style.background  = rc;
+    document.getElementById('anime-rarity-dot').style.boxShadow   = `0 0 8px ${rc}`;
+    document.getElementById('anime-rarity-badge').textContent      = r;
+    document.getElementById('anime-rarity-badge').style.background = rc+'33';
+    document.getElementById('anime-rarity-badge').style.color      = rc;
+    document.getElementById('anime-rarity-badge').style.border     = `1px solid ${rc}`;
+    document.getElementById('anime-header').style.borderBottom     = `2px solid ${rc}`;
+    animePanel.style.border    = `3px solid ${rc}`;
+    animePanel.style.boxShadow = `0 0 30px ${rc}50`;
     document.getElementById('anime-gif').src = data.gifUrl;
-
     showPanel(animePanel, 10000, onEventFinished);
   }
 
-  // ── MEDIA GENÉRICA ──────────────────────────────────────────────
+  // ── MEDIA ───────────────────────────────────────────────────────
 
   const mediaPanel = document.getElementById('media-panel');
 
@@ -280,18 +398,163 @@
     document.getElementById('media-title').textContent     = data.title;
     document.getElementById('media-triggered').textContent = '🎮 invocado por @' + data.triggeredBy;
     document.getElementById('media-gif').src               = data.mediaUrl;
+    const c = data.accentColor || '#e53935';
+    mediaPanel.style.border    = '3px solid ' + c;
+    mediaPanel.style.boxShadow = `0 0 30px ${c}80`;
+    document.getElementById('media-header').style.borderBottom = '2px solid ' + c;
+    if (data.soundUrl) { try { const s=new Audio(data.soundUrl); s.volume=0.2; s.play().catch(()=>{}); } catch(e){} }
+    showPanel(mediaPanel, (data.durationSeconds||8)*1000, onEventFinished);
+  }
 
-    const color = data.accentColor || '#e53935';
-    mediaPanel.style.border                                        = '3px solid ' + color;
-    mediaPanel.style.boxShadow                                     = `0 0 30px ${color}80`;
-    document.getElementById('media-header').style.borderBottom     = '2px solid ' + color;
+  // ── BATTLE ──────────────────────────────────────────────────────
 
-    if (data.soundUrl && data.soundUrl.length > 0) {
-      try { const s = new Audio(data.soundUrl); s.volume = 0.2; s.play().catch(()=>{}); } catch(e) {}
+  const battlePanel      = document.getElementById('battle-panel');
+  const battleAttackGif  = document.getElementById('battle-attack-gif');
+  const battleStartGif   = document.getElementById('battle-start-gif');
+  const battleVictory    = document.getElementById('battle-victory');
+  const battleVictoryGif = document.getElementById('battle-victory-gif');
+
+  // Estado local del combate (para saber qué jugador es player1/player2)
+  let battleState = null;
+
+  function hpColor(pct) {
+    if (pct > 0.5) return '#66BB6A';
+    if (pct > 0.25) return '#FFD600';
+    return '#EF5350';
+  }
+
+  function updateHpBar(fillId, valId, hp, maxHp) {
+    const pct  = Math.max(0, hp / maxHp);
+    const fill = document.getElementById(fillId);
+    const val  = document.getElementById(valId);
+    fill.style.width      = (pct * 100) + '%';
+    fill.style.background = hpColor(pct);
+    val.textContent       = hp + '/' + maxHp;
+  }
+
+  function showDamageNumber(playerId, damage) {
+    const player = document.getElementById(playerId);
+    const dmg    = document.createElement('div');
+    dmg.className   = 'dmg-number';
+    dmg.textContent = '-' + damage;
+    player.appendChild(dmg);
+    setTimeout(() => dmg.remove(), 1300);
+  }
+
+  function setBattleTurn(name) {
+    document.getElementById('battle-turn').textContent = '▶ @' + name;
+    // Resaltar el jugador activo
+    const p1Active = battleState && name === battleState.player1.name;
+    document.getElementById('bp1').classList.toggle('active-turn', p1Active);
+    document.getElementById('bp2').classList.toggle('active-turn', !p1Active);
+  }
+
+  // ── battle_start ──
+
+  function onBattleStart(data) {
+    battleState = data;
+    battleVictory.style.display = 'none';
+
+    // Rellenar jugador 1
+    document.getElementById('bp1-sprite').src = data.player1.spriteUrl;
+    document.getElementById('bp1-pokemon').textContent = data.player1.pokemon;
+    document.getElementById('bp1-user').textContent    = '@' + data.player1.name;
+    updateHpBar('bp1-hp-fill', 'bp1-hp-val', data.player1.hp, data.player1.maxHp);
+
+    // Rellenar jugador 2
+    document.getElementById('bp2-sprite').src = data.player2.spriteUrl;
+    document.getElementById('bp2-pokemon').textContent = data.player2.pokemon;
+    document.getElementById('bp2-user').textContent    = '@' + data.player2.name;
+    updateHpBar('bp2-hp-fill', 'bp2-hp-val', data.player2.hp, data.player2.maxHp);
+
+    // Turno inicial = player1 (el retador)
+    setBattleTurn(data.player1.name);
+
+    // Mostrar panel
+    battlePanel.style.display   = 'block';
+    battlePanel.style.animation = 'battleSlideIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275)';
+
+    // GIF de inicio si hay
+    if (data.startGifUrl && data.startGifUrl.length > 5) {
+      battleStartGif.src     = data.startGifUrl;
+      battleStartGif.style.display = 'block';
+      battleStartGif.style.animation = 'gifFlash 2s ease forwards';
+      setTimeout(() => { battleStartGif.style.display = 'none'; }, 2000);
+    }
+  }
+
+  // ── battle_attack ──
+
+  function onBattleAttack(data) {
+    // Actualizar estado local
+    if (battleState) {
+      battleState.player1.hp = data.player1.hp;
+      battleState.player2.hp = data.player2.hp;
     }
 
-    const duration = (data.durationSeconds || 8) * 1000;
-    showPanel(mediaPanel, duration, onEventFinished);
+    // Actualizar barras
+    updateHpBar('bp1-hp-fill', 'bp1-hp-val', data.player1.hp, data.player1.maxHp);
+    updateHpBar('bp2-hp-fill', 'bp2-hp-val', data.player2.hp, data.player2.maxHp);
+
+    // Shake + número de daño en el defensor
+    const defIsP1 = battleState && data.defender === battleState.player1.name;
+    const defId   = defIsP1 ? 'bp1' : 'bp2';
+    document.getElementById(defId).classList.add('damaged');
+    setTimeout(() => document.getElementById(defId).classList.remove('damaged'), 400);
+    showDamageNumber(defId, data.damage);
+
+    // Shake del panel completo
+    battlePanel.classList.add('shake');
+    setTimeout(() => battlePanel.classList.remove('shake'), 400);
+
+    // GIF de ataque
+    if (data.attackGifUrl && data.attackGifUrl.length > 5) {
+      battleAttackGif.src            = data.attackGifUrl;
+      battleAttackGif.style.display  = 'block';
+      battleAttackGif.style.animation = 'gifFlash 1.5s ease forwards';
+      setTimeout(() => { battleAttackGif.style.display = 'none'; }, 1500);
+    }
+
+    // Siguiente turno: el que no atacó
+    if (battleState) {
+      const nextTurn = data.attacker === battleState.player1.name
+              ? battleState.player2.name : battleState.player1.name;
+      setTimeout(() => setBattleTurn(nextTurn), 600);
+    }
+  }
+
+  // ── battle_end ──
+
+  function onBattleEnd(data) {
+    // Actualizar turno a vacío
+    document.getElementById('battle-turn').textContent = '';
+    document.getElementById('bp1').classList.remove('active-turn');
+    document.getElementById('bp2').classList.remove('active-turn');
+
+    // Mostrar banner de victoria
+    if (data.victoryGifUrl && data.victoryGifUrl.length > 5) {
+      battleVictoryGif.src           = data.victoryGifUrl;
+      battleVictoryGif.style.display = 'block';
+    } else {
+      battleVictoryGif.style.display = 'none';
+    }
+
+    document.getElementById('victory-text').textContent = data.fled
+            ? '🏳️ ABANDONO'
+            : '🏆 ¡VICTORIA!';
+    document.getElementById('victory-sub').textContent = '@' + data.winner + ' gana el combate!';
+
+    battleVictory.style.display = 'block';
+
+    // Ocultar panel tras 5 segundos
+    setTimeout(() => {
+      battlePanel.style.animation = 'battleSlideOut 0.5s ease forwards';
+      setTimeout(() => {
+        battlePanel.style.display   = 'none';
+        battleVictory.style.display = 'none';
+        battleState = null;
+      }, 500);
+    }, 5000);
   }
 
   // ── WEBSOCKET ───────────────────────────────────────────────────
@@ -302,8 +565,17 @@
     ws.onclose   = () => { console.log('Reconectando en 3s...'); setTimeout(connectWebSocket, 3000); };
     ws.onerror   = (e) => console.error('WebSocket error', e);
     ws.onmessage = (e) => {
-      try { enqueue(JSON.parse(e.data)); }
-      catch(err) { console.error('Error parseando mensaje', err); }
+      try {
+        const data = JSON.parse(e.data);
+        // Eventos de batalla: fuera de la cola, panel persistente
+        if (data.type === 'battle_start')  { onBattleStart(data);  return; }
+        if (data.type === 'battle_attack') { onBattleAttack(data); return; }
+        if (data.type === 'battle_end')    { onBattleEnd(data);    return; }
+        // Resto: van a la cola
+        enqueue(data);
+      } catch(err) {
+        console.error('Error parseando mensaje', err);
+      }
     };
   }
 

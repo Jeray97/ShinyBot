@@ -5,63 +5,72 @@ import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
 import com.soulshinygame.bot.commands.Command;
 import com.soulshinygame.bot.commands.CommandRegistry;
 import com.soulshinygame.bot.database.DatabaseManager;
+import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/**
- * Sistema de combate Pokémon por chat.
- *
- * Comandos registrados:
- *   !retar @usuario  → reta a alguien
- *   !aceptar         → acepta el reto más reciente que te han hecho
- *   !atacar          → ataca en tu turno
- *   !huir            → te rindes
- *
- * Los comandos de combate (!atacar, !huir) solo funcionan si el usuario
- * está en una batalla activa. El resto los ignora.
- *
- * Uso en Main.java:
- *   new BattleSystem(db).registerInto(registry);
- */
 public class BattleSystem {
 
     private static final Logger log = LoggerFactory.getLogger(BattleSystem.class);
+    private static final String ASSETS_FILE = "battle_assets.json";
+    private static final long CHALLENGE_TIMEOUT_MS = 60_000;
 
-    // Batallas activas: clave = nombre del jugador (ambos apuntan a la misma batalla)
-    private final Map<String, Battle> activeBattles  = new ConcurrentHashMap<>();
-
-    // Retos pendientes: clave = nombre del retado, valor = batalla pendiente
+    private final Map<String, Battle> activeBattles     = new ConcurrentHashMap<>();
     private final Map<String, Battle> pendingChallenges = new ConcurrentHashMap<>();
 
     private final DatabaseManager db;
+    private final WebSocketOverlayServer overlayServer;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    // Expirar retos sin respuesta tras 60 segundos
-    private static final long CHALLENGE_TIMEOUT_MS = 60_000;
+    private String attackGifUrl  = "";
+    private String victoryGifUrl = "";
+    private String startGifUrl   = "";
 
-    public BattleSystem(DatabaseManager db) {
-        this.db = db;
+    public BattleSystem(DatabaseManager db, WebSocketOverlayServer overlayServer) {
+        this.db            = db;
+        this.overlayServer = overlayServer;
+        loadAssets();
         startExpirationTimer();
     }
 
-    /** Registra todos los comandos de batalla en el registry */
+    private void loadAssets() {
+        Path path = Path.of(ASSETS_FILE);
+        if (!Files.exists(path)) {
+            log.warn("{} no encontrado. El overlay de batalla no tendrá GIFs.", ASSETS_FILE);
+            return;
+        }
+        try {
+            String json  = Files.readString(path);
+            attackGifUrl  = field(json, "attackGif");
+            victoryGifUrl = field(json, "victoryGif");
+            startGifUrl   = field(json, "startGif");
+            log.info("Battle assets cargados desde {}", ASSETS_FILE);
+        } catch (IOException e) {
+            log.error("Error leyendo {}", ASSETS_FILE, e);
+        }
+    }
+
     public void registerInto(CommandRegistry registry) {
         registry
                 .register(retarCommand())
                 .register(aceptarCommand())
                 .register(atacarCommand())
                 .register(huirCommand());
-
         log.info("BattleSystem registrado: !retar, !aceptar, !atacar, !huir");
     }
 
-    // ── COMANDO !retar ────────────────────────────────────────────
+    // ── !retar ────────────────────────────────────────────────────
 
     private Command retarCommand() {
         return new Command() {
@@ -73,40 +82,21 @@ public class BattleSystem {
                 String challenger = event.getUser().getName().toLowerCase();
                 String[] parts    = event.getMessage().trim().split("\\s+");
 
-                if (parts.length < 2) {
-                    send(client, channel, "@" + challenger + " usa !retar @usuario");
-                    return;
-                }
+                if (parts.length < 2) { send(client, channel, "@" + challenger + " usa !retar @usuario"); return; }
 
-                // Quitar @ del nombre si lo tienen
                 String challenged = parts[1].replace("@", "").toLowerCase();
 
-                if (challenged.equals(challenger)) {
-                    send(client, channel, "@" + challenger + " no puedes retarte a ti mismo 😅");
-                    return;
-                }
+                if (challenged.equals(challenger)) { send(client, channel, "@" + challenger + " no puedes retarte a ti mismo 😅"); return; }
+                if (activeBattles.containsKey(challenger)) { send(client, channel, "@" + challenger + " ya estás en combate! Usa !huir primero"); return; }
+                if (pendingChallenges.containsKey(challenged)) { send(client, channel, "@" + challenged + " ya tiene un reto pendiente"); return; }
 
-                if (activeBattles.containsKey(challenger)) {
-                    send(client, channel, "@" + challenger + " ya estás en un combate! Usa !huir primero");
-                    return;
-                }
-
-                if (pendingChallenges.containsKey(challenged)) {
-                    send(client, channel, "@" + challenged + " ya tiene un reto pendiente");
-                    return;
-                }
-
-                Battle battle = new Battle(challenger, challenged);
-                pendingChallenges.put(challenged, battle);
-
-                send(client, channel,
-                        "⚔️ @" + challenger + " reta a @" + challenged +
-                                " a un combate Pokémon! Escribe !aceptar en los próximos 60s o el reto expira");
+                pendingChallenges.put(challenged, new Battle(challenger, challenged));
+                send(client, channel, "⚔️ @" + challenger + " reta a @" + challenged + " a un combate Pokémon! Escribe !aceptar en los próximos 60s");
             }
         };
     }
 
-    // ── COMANDO !aceptar ──────────────────────────────────────────
+    // ── !aceptar ──────────────────────────────────────────────────
 
     private Command aceptarCommand() {
         return new Command() {
@@ -117,40 +107,30 @@ public class BattleSystem {
                 String challenged = event.getUser().getName().toLowerCase();
                 Battle battle     = pendingChallenges.remove(challenged);
 
-                if (battle == null) {
-                    send(client, channel, "@" + challenged + " no tienes ningún reto pendiente");
-                    return;
-                }
+                if (battle == null) { send(client, channel, "@" + challenged + " no tienes ningún reto pendiente"); return; }
+                if (activeBattles.containsKey(challenged)) { send(client, channel, "@" + challenged + " ya estás en combate!"); return; }
 
-                if (activeBattles.containsKey(challenged)) {
-                    send(client, channel, "@" + challenged + " ya estás en un combate!");
-                    return;
-                }
-
-                // Iniciar batalla
                 battle.start();
                 activeBattles.put(battle.challengerName, battle);
                 activeBattles.put(battle.challengedName, battle);
 
                 send(client, channel,
-                        "🔴 ¡Comienza el combate! " +
-                                "@" + battle.challengerName + " → " + battle.challengerPokemonName +
-                                " (" + battle.getMaxHp(battle.challengerName) + "HP) VS " +
-                                "@" + battle.challengedName + " → " + battle.challengedPokemonName +
+                        "🔴 ¡Comienza el combate! @" + battle.challengerName + " → " + battle.challengerPokemonName +
+                                " (" + battle.getMaxHp(battle.challengerName) + "HP) VS @" +
+                                battle.challengedName + " → " + battle.challengedPokemonName +
                                 " (" + battle.getMaxHp(battle.challengedName) + "HP)");
+                send(client, channel, "⚔️ Turno de @" + battle.getCurrentTurnName() + " — usa !atacar");
 
-                send(client, channel,
-                        "⚔️ Turno de @" + battle.getCurrentTurnName() +
-                                " — usa !atacar");
+                overlayServer.sendEvent(buildStartEvent(battle));
 
-                log.info("Combate iniciado: {} ({}) vs {} ({})",
+                log.info("Combate: {} ({}) vs {} ({})",
                         battle.challengerName, battle.challengerPokemonName,
                         battle.challengedName, battle.challengedPokemonName);
             }
         };
     }
 
-    // ── COMANDO !atacar ───────────────────────────────────────────
+    // ── !atacar ───────────────────────────────────────────────────
 
     private Command atacarCommand() {
         return new Command() {
@@ -161,49 +141,34 @@ public class BattleSystem {
                 String player = event.getUser().getName().toLowerCase();
                 Battle battle = activeBattles.get(player);
 
-                if (battle == null || battle.state != Battle.State.ACTIVE) {
-                    send(client, channel, "@" + player + " no estás en ningún combate");
-                    return;
-                }
+                if (battle == null || battle.state != Battle.State.ACTIVE) { send(client, channel, "@" + player + " no estás en ningún combate"); return; }
+                if (!battle.getCurrentTurnName().equals(player)) { send(client, channel, "@" + player + " ¡espera tu turno! Le toca a @" + battle.getCurrentTurnName()); return; }
 
-                // Verificar turno
-                if (!battle.getCurrentTurnName().equals(player)) {
-                    send(client, channel,
-                            "@" + player + " ¡espera tu turno! Le toca a @" + battle.getCurrentTurnName());
-                    return;
-                }
-
-                String attacker      = player;
-                String defender      = attacker.equals(battle.challengerName)
-                        ? battle.challengedName : battle.challengerName;
-                String attackerPkmn  = battle.getPokemonName(attacker);
-                String defenderPkmn  = battle.getPokemonName(defender);
+                String attacker     = player;
+                String defender     = attacker.equals(battle.challengerName) ? battle.challengedName : battle.challengerName;
 
                 int damage = battle.attack();
 
-                // Mensaje del ataque
                 send(client, channel,
-                        "💥 " + attackerPkmn + " de @" + attacker +
-                                " atacó a " + defenderPkmn + " de @" + defender +
+                        "💥 " + battle.getPokemonName(attacker) + " de @" + attacker +
+                                " atacó a " + battle.getPokemonName(defender) + " de @" + defender +
                                 " causando " + damage + " de daño!");
-
-                // Mostrar estado de vida
                 send(client, channel,
-                        "❤️ @" + battle.challengerName + " [" + battle.hpBar(battle.challengerName) + "]  " +
+                        "❤️ @" + battle.challengerName + " [" + battle.hpBar(battle.challengerName) + "] " +
                                 "| @" + battle.challengedName + " [" + battle.hpBar(battle.challengedName) + "]");
 
-                // Comprobar si terminó
+                overlayServer.sendEvent(buildAttackEvent(battle, attacker, defender, damage));
+
                 if (battle.isOver()) {
                     endBattle(battle, battle.getWinner(), client, channel, false);
                 } else {
-                    send(client, channel,
-                            "⚔️ Turno de @" + battle.getCurrentTurnName() + " — usa !atacar");
+                    send(client, channel, "⚔️ Turno de @" + battle.getCurrentTurnName() + " — usa !atacar");
                 }
             }
         };
     }
 
-    // ── COMANDO !huir ─────────────────────────────────────────────
+    // ── !huir ─────────────────────────────────────────────────────
 
     private Command huirCommand() {
         return new Command() {
@@ -214,62 +179,83 @@ public class BattleSystem {
                 String player = event.getUser().getName().toLowerCase();
                 Battle battle = activeBattles.get(player);
 
-                if (battle == null) {
-                    send(client, channel, "@" + player + " no estás en ningún combate");
-                    return;
-                }
+                if (battle == null) { send(client, channel, "@" + player + " no estás en ningún combate"); return; }
 
-                String winner = player.equals(battle.challengerName)
-                        ? battle.challengedName : battle.challengerName;
-
+                String winner = player.equals(battle.challengerName) ? battle.challengedName : battle.challengerName;
                 endBattle(battle, winner, client, channel, true);
             }
         };
     }
 
-    // ── FIN DE BATALLA ────────────────────────────────────────────
+    // ── FIN ───────────────────────────────────────────────────────
 
-    private void endBattle(Battle battle, String winnerName,
-                           TwitchClient client, String channel, boolean fled) {
+    private void endBattle(Battle battle, String winnerName, TwitchClient client, String channel, boolean fled) {
         battle.state = Battle.State.FINISHED;
         activeBattles.remove(battle.challengerName);
         activeBattles.remove(battle.challengedName);
 
-        String loserName = winnerName.equals(battle.challengerName)
-                ? battle.challengedName : battle.challengerName;
+        String loserName = winnerName.equals(battle.challengerName) ? battle.challengedName : battle.challengerName;
 
         if (fled) {
-            send(client, channel,
-                    "🏳️ @" + loserName + " huyó del combate! @" + winnerName + " ¡gana por abandono! 🏆");
+            send(client, channel, "🏳️ @" + loserName + " huyó! @" + winnerName + " gana por abandono! 🏆");
         } else {
-            send(client, channel,
-                    "🏆 ¡" + battle.getPokemonName(winnerName) + " de @" + winnerName +
-                            " venció a " + battle.getPokemonName(loserName) + " de @" + loserName + "!");
-            send(client, channel,
-                    "🎉 @" + winnerName + " gana el combate! ¡Felicidades!");
+            send(client, channel, "🏆 ¡" + battle.getPokemonName(winnerName) + " de @" + winnerName + " venció a " + battle.getPokemonName(loserName) + " de @" + loserName + "!");
+            send(client, channel, "🎉 @" + winnerName + " gana el combate!");
         }
 
-        // Dar puntos al ganador
         db.addPoints(winnerName, 50);
-        send(client, channel, "⭐ @" + winnerName + " gana 50 puntos por la victoria!");
+        send(client, channel, "⭐ @" + winnerName + " gana 50 puntos!");
+
+        overlayServer.sendEvent(buildEndEvent(battle, winnerName, fled));
 
         log.info("Combate terminado: ganador={}", winnerName);
     }
 
-    // ── EXPIRACIÓN DE RETOS ───────────────────────────────────────
+    // ── JSON BUILDERS ─────────────────────────────────────────────
+
+    private String buildStartEvent(Battle b) {
+        return String.format("""
+            {"type":"battle_start","startGifUrl":"%s",
+             "player1":{"name":"%s","pokemon":"%s","hp":%d,"maxHp":%d,"spriteUrl":"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/%d.png"},
+             "player2":{"name":"%s","pokemon":"%s","hp":%d,"maxHp":%d,"spriteUrl":"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/%d.png"}}""",
+                startGifUrl,
+                b.challengerName, b.challengerPokemonName, b.challengerPokemon[1], b.challengerPokemon[2], b.challengerPokemon[0],
+                b.challengedName,  b.challengedPokemonName, b.challengedPokemon[1], b.challengedPokemon[2], b.challengedPokemon[0]);
+    }
+
+    private String buildAttackEvent(Battle b, String attacker, String defender, int damage) {
+        return String.format("""
+            {"type":"battle_attack","attacker":"%s","defender":"%s","damage":%d,"attackGifUrl":"%s",
+             "player1":{"name":"%s","hp":%d,"maxHp":%d},
+             "player2":{"name":"%s","hp":%d,"maxHp":%d}}""",
+                attacker, defender, damage, attackGifUrl,
+                b.challengerName, b.challengerPokemon[1], b.challengerPokemon[2],
+                b.challengedName,  b.challengedPokemon[1], b.challengedPokemon[2]);
+    }
+
+    private String buildEndEvent(Battle b, String winner, boolean fled) {
+        String loser = winner.equals(b.challengerName) ? b.challengedName : b.challengerName;
+        return String.format(
+                "{\"type\":\"battle_end\",\"winner\":\"%s\",\"loser\":\"%s\",\"fled\":%b,\"victoryGifUrl\":\"%s\"}",
+                winner, loser, fled, victoryGifUrl);
+    }
 
     private void startExpirationTimer() {
         scheduler.scheduleAtFixedRate(() -> {
             long now = System.currentTimeMillis();
-            pendingChallenges.entrySet().removeIf(entry -> {
-                boolean expired = now - entry.getValue().createdAt > CHALLENGE_TIMEOUT_MS;
-                if (expired) log.debug("Reto expirado para {}", entry.getKey());
-                return expired;
-            });
+            pendingChallenges.entrySet().removeIf(e -> now - e.getValue().createdAt > CHALLENGE_TIMEOUT_MS);
         }, 10, 10, TimeUnit.SECONDS);
     }
 
     private void send(TwitchClient client, String channel, String msg) {
         client.getChat().sendMessage(channel, msg);
+    }
+
+    private String field(String json, String key) {
+        try {
+            Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+            Matcher m = p.matcher(json);
+            return m.find() ? m.group(1) : "";
+        } catch (Exception e) { return ""; }
     }
 }
