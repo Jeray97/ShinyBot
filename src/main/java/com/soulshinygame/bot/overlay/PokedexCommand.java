@@ -95,7 +95,7 @@ public class PokedexCommand implements Command {
         if (json == null) return null;
         try {
             // Buscamos el bloque donde language.name es "es"
-            Pattern p = Pattern.compile("\"name\":\"([^\"]+)\",\"language\":\\{\"name\":\"es\"");
+            Pattern p = Pattern.compile("\"name\"\\s*:\\s*\"([^\"]+)\"[^}]*\"language\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"es\"");
             Matcher m = p.matcher(json);
             if (m.find()) return m.group(1);
         } catch (Exception e) {
