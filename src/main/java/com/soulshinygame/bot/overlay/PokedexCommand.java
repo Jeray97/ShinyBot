@@ -95,7 +95,7 @@ public class PokedexCommand implements Command {
         if (json == null) return null;
         try {
             // Buscamos el bloque donde language.name es "es"
-            Pattern p = Pattern.compile("\"name\"\\s*:\\s*\"([^\"]+)\"[^}]*\"language\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"es\"");
+            Pattern p = Pattern.compile("\"language\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"es\"[^}]*\\}\\s*,\\s*\"name\"\\s*:\\s*\"([^\"]+)\"");
             Matcher m = p.matcher(json);
             if (m.find()) return m.group(1);
         } catch (Exception e) {
@@ -105,7 +105,8 @@ public class PokedexCommand implements Command {
     }
 
     private PokemonData parseResponse(int id, String json, String nameEs) {
-        String nameEn = extractString(json, "\"name\":\"", "\"", 0);
+        String speciesSection = extractBlock(json, "\"species\":");
+        String nameEn = extractString(speciesSection, "\"name\":\"", "\"", 0);
         int hp        = extractStat(json, "hp");
         int attack    = extractStat(json, "attack");
         int defense   = extractStat(json, "defense");
