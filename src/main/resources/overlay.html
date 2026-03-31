@@ -364,7 +364,7 @@
               const fill = document.getElementById(s.bar); fill.style.width='0%';
               setTimeout(() => { fill.style.width = Math.min(100,(s.v/255)*100)+'%'; }, 400);
             });
-    try { cry.src=data.cryUrl; cry.volume=0.2; cry.play().catch(()=>{}); } catch(e) {}
+    try { cry.src=data.cryUrl; cry.volume=0.1; cry.play().catch(()=>{}); } catch(e) {}
     showPanel(pokedexPanel, 12000, onEventFinished);
   }
 
