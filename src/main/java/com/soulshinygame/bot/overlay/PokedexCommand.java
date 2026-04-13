@@ -90,7 +90,8 @@ public class PokedexCommand implements Command {
                                 newMsg + remainingMsg);
 
                 overlayServer.sendEvent(pokemon.toJson(username));
-                log.info("Pokédex: {} → {} #{} nuevo={}", username, pokemon.getNameEs(), pokemon.getId(), isNew);
+                log.info("Pokédex: {} → {} #{} nuevo={}", username,
+                        pokemon.getNameEs(), pokemon.getId(), isNew);
 
             } catch (Exception e) {
                 log.error("Error en !pokedex", e);
@@ -107,13 +108,22 @@ public class PokedexCommand implements Command {
     }
 
     private String get(String url) throws IOException, InterruptedException {
-        HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url))
-                .header("User-Agent", "SoulShinyBot/1.0").GET().build();
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", "SoulShinyBot/1.0")
+                .GET().build();
         HttpResponse<String> res = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-        if (res.statusCode() != 200) { log.warn("API {} → {}", url, res.statusCode()); return null; }
+        if (res.statusCode() != 200) {
+            log.warn("API {} → {}", url, res.statusCode());
+            return null;
+        }
         return res.body();
     }
 
+    /**
+     * El nombre en español viene en el array "names" de la species API.
+     * Buscamos el objeto donde language.name es "es".
+     */
     private String extractSpanishName(String json) {
         if (json == null) return null;
         try {
@@ -121,37 +131,91 @@ public class PokedexCommand implements Command {
                     "\"name\"\\s*:\\s*\"([^\"]+)\"[^}]*\"language\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"es\"");
             Matcher m = p.matcher(json);
             if (m.find()) return m.group(1);
-        } catch (Exception e) { log.warn("No se pudo extraer nombre ES"); }
+        } catch (Exception e) {
+            log.warn("No se pudo extraer nombre ES");
+        }
         return null;
     }
 
     private PokemonData parseResponse(int id, String json, String nameEs) {
-        String nameEn = extractString(json, "\"name\":\"", "\"", 0);
-        int hp = extractStat(json,"hp"), attack = extractStat(json,"attack"),
-                defense = extractStat(json,"defense"), speed = extractStat(json,"speed");
-        String ts = extractBlock(json, "\"types\":");
-        String type1 = extractString(ts,"\"name\":\"","\"",0);
-        String type2 = extractString(ts,"\"name\":\"","\"",type1.length()+10);
+        // El nombre del Pokémon en el JSON raíz siempre va seguido de "order":
+        // Así evitamos coger el nombre de una habilidad o movimiento
+        String nameEn = extractPokemonName(json);
+
+        int hp      = extractStat(json, "hp");
+        int attack  = extractStat(json, "attack");
+        int defense = extractStat(json, "defense");
+        int speed   = extractStat(json, "speed");
+
+        // Tipos
+        String typesSection = extractBlock(json, "\"types\":");
+        String type1 = extractString(typesSection, "\"name\":\"", "\"", 0);
+        String type2 = extractString(typesSection, "\"name\":\"", "\"", type1.length() + 10);
         if (type2.equals(type1)) type2 = null;
-        String ss = extractBlock(json,"\"sprites\":");
-        String spriteUrl = extractString(ss,"\"front_default\":\"","\"",0);
-        String animatedUrl = extractString(ss,"\"animated\":{\"back_default","front_default\":\"",0);
-        animatedUrl = extractString(animatedUrl,"\"","\"",0);
+
+        // Sprites
+        String spritesSection = extractBlock(json, "\"sprites\":");
+        String spriteUrl = extractString(spritesSection, "\"front_default\":\"", "\"", 0);
+        String animatedUrl = extractString(spritesSection,
+                "\"animated\":{\"back_default", "front_default\":\"", 0);
+        animatedUrl = extractString(animatedUrl, "\"", "\"", 0);
         if (animatedUrl.isEmpty()) animatedUrl = spriteUrl;
-        String cryUrl = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/"+id+".ogg";
-        String finalName = (nameEs!=null && !nameEs.isEmpty()) ? nameEs : capitalize(nameEn);
-        return new PokemonData(id, nameEn, finalName, type1, type2, hp, attack, defense, speed, spriteUrl, animatedUrl, cryUrl);
+
+        String cryUrl = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/" + id + ".ogg";
+
+        // Si no hay nombre en español usar el inglés capitalizado
+        String finalName = (nameEs != null && !nameEs.isEmpty()) ? nameEs : capitalize(nameEn);
+
+        return new PokemonData(id, nameEn, finalName, type1, type2,
+                hp, attack, defense, speed, spriteUrl, animatedUrl, cryUrl);
     }
 
-    private String extractString(String t, String s, String e, int f) {
-        try { int i=t.indexOf(s,f)+s.length(); return t.substring(i,t.indexOf(e,i)); } catch(Exception ex){return "";}
+    /**
+     * Extrae el nombre raíz del Pokémon.
+     * En el JSON de PokéAPI el nombre del Pokémon siempre aparece como:
+     *   "name": "pikachu", "order": 35
+     * Los nombres de habilidades y movimientos nunca van seguidos de "order".
+     */
+    private String extractPokemonName(String json) {
+        try {
+            Pattern p = Pattern.compile(
+                    "\"name\"\\s*:\\s*\"([a-z0-9\\-]+)\"\\s*,\\s*\"order\"\\s*:");
+            Matcher m = p.matcher(json);
+            if (m.find()) return m.group(1);
+        } catch (Exception e) {
+            log.warn("No se pudo extraer nombre del Pokémon");
+        }
+        return "unknown";
     }
-    private String extractBlock(String t, String m) {
-        try { int i=t.indexOf(m)+m.length(); return t.substring(i,Math.min(i+2000,t.length())); } catch(Exception ex){return "";}
+
+    private String extractString(String text, String startMarker, String endMarker, int fromIndex) {
+        try {
+            int start = text.indexOf(startMarker, fromIndex) + startMarker.length();
+            int end   = text.indexOf(endMarker, start);
+            return text.substring(start, end);
+        } catch (Exception e) { return ""; }
     }
-    private int extractStat(String json, String stat) {
-        try { Pattern p=Pattern.compile("\"base_stat\":(\\d+)[^}]+\"name\":\""+stat+"\""); Matcher m=p.matcher(json); if(m.find())return Integer.parseInt(m.group(1)); } catch(Exception e){}
+
+    private String extractBlock(String text, String marker) {
+        try {
+            int start = text.indexOf(marker) + marker.length();
+            return text.substring(start, Math.min(start + 2000, text.length()));
+        } catch (Exception e) { return ""; }
+    }
+
+    private int extractStat(String json, String statName) {
+        try {
+            Pattern p = Pattern.compile("\"base_stat\":(\\d+)[^}]+\"name\":\"" + statName + "\"");
+            Matcher m = p.matcher(json);
+            if (m.find()) return Integer.parseInt(m.group(1));
+        } catch (Exception e) {
+            log.warn("No se pudo extraer stat: {}", statName);
+        }
         return 0;
     }
-    private String capitalize(String s) { return (s==null||s.isEmpty())?s:s.substring(0,1).toUpperCase()+s.substring(1); }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.substring(0, 1).toUpperCase() + s.substring(1);
+    }
 }
