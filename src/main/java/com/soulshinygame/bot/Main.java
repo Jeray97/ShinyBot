@@ -14,6 +14,8 @@ import com.soulshinygame.bot.overlay.OverlayHttpServer;
 import com.soulshinygame.bot.overlay.PokedexCommand;
 import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
 import com.soulshinygame.bot.timers.TimerManager;
+import com.soulshinygame.bot.util.DailyLimitManager;
+import com.soulshinygame.bot.util.FollowerCache;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,10 @@ public class Main {
                 .getUsers(null, null, List.of(channel))
                 .execute().getUsers().get(0).getId();
 
+        // Utilidades compartidas
+        FollowerCache followerCache = new FollowerCache(client, broadcasterId);
+        DailyLimitManager dailyLimit = new DailyLimitManager();
+
         // ═══════════════════════════════════════════════════════════════
         // REGISTRO DE COMANDOS
         // ═══════════════════════════════════════════════════════════════
@@ -69,25 +75,23 @@ public class Main {
                 .register(new PuntosCommand(db))
                 .register(new DadosCommand(db))
                 .register(new ColeccionCommand(db))
-                .register(new PokedexCommand(overlayServer))
-                .register(new AnimeCommand(overlayServer, db));
+                .register(new PokedexCommand(overlayServer, db, followerCache, dailyLimit))
+                .register(new AnimeCommand(overlayServer, db, followerCache, dailyLimit));
 
         // Comandos de media desde media_commands.json (sin recompilar)
         new MediaCommandsLoader(overlayServer, db).loadInto(registry);
 
-        // Sistema de combate Pokémon (!retar, !aceptar, !atacar, !huir)
+        // Sistema de combate Pokémon
         new BattleSystem(db, overlayServer).registerInto(registry);
 
         registry.start();
 
         // ═══════════════════════════════════════════════════════════════
-        // TIMERS (mensajes automáticos desde timers.json)
+        // TIMERS
         // ═══════════════════════════════════════════════════════════════
 
         TimerManager timerManager = new TimerManager(client, channel);
         timerManager.start();
-
-        // ══════════════════════════════════════════════════════════════
 
         new ModerationHandler(channel, client, broadcasterId).register();
 
