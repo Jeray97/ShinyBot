@@ -24,14 +24,9 @@
     @keyframes slideOut      { from{transform:translateX(0);opacity:1}     to{transform:translateX(-120%);opacity:0} }
     @keyframes blink         { 0%,100%{opacity:1} 50%{opacity:0.3} }
     @keyframes float         { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-    @keyframes shake         { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
-    @keyframes dmgFloat      { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-60px) scale(1.4)} }
-    @keyframes battleSlideIn { from{transform:translateY(120%);opacity:0} to{transform:translateY(0);opacity:1} }
-    @keyframes battleSlideOut{ from{transform:translateY(0);opacity:1}    to{transform:translateY(120%);opacity:0} }
-    @keyframes victoryPulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
-    @keyframes gifFlash      { 0%,100%{opacity:0} 10%,90%{opacity:1} }
+    @keyframes dmgFloat      { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-70px) scale(1.5)} }
 
-    /* ── BASE PANELES ── */
+    /* ── BASE PANELES (pokedex, anime, media) ── */
     .overlay-panel {
       position: absolute; bottom: 40px; left: 40px;
       border-radius: 20px; padding: 20px; display: none;
@@ -81,107 +76,232 @@
     .media-img-wrapper { width:100%;border-radius:12px;overflow:hidden; }
     #media-gif    { width:100%;max-height:300px;object-fit:contain;border-radius:10px; }
 
-    /* ── BATTLE PANEL ── */
-    #battle-panel {
+    /* ════════════════════════════════════════════
+       BATTLE SCENE — estilo combate Pokemon clasico
+       ════════════════════════════════════════════ */
+
+    #battle-scene {
       position: absolute;
-      bottom: 40px; left: 40px;
-      width: 560px;
-      background: rgba(8,8,8,0.95);
-      border: 3px solid #e53935;
-      border-radius: 20px;
-      padding: 18px;
+      bottom: 0; left: 0; right: 0;
+      height: 490px;
       display: none;
-      box-shadow: 0 0 40px rgba(229,57,53,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+      overflow: hidden;
     }
-    #battle-panel.shake { animation: shake 0.4s ease; }
 
-    /* Cabecera battle */
-    .battle-header {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 14px; padding-bottom: 10px;
-      border-bottom: 2px solid #e53935;
+    /* Fondo — cielo + hierba */
+    #bs-sky {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 120px;
+      background: linear-gradient(to bottom,
+        #4A8FD4 0%, #6BAEE6 38%, #9ECFF0 55%,
+        #A8DDA0 55%, #78C068 65%, #52924A 100%);
     }
-    .battle-title { color:#e53935; font-size:10px; letter-spacing:3px; text-transform:uppercase; flex:1; }
-    .battle-turn  { color:#FFD600; font-size:8px; }
-
-    /* Jugadores */
-    .battle-players { display:flex; gap:12px; margin-bottom:14px; }
-
-    .battle-player {
-      flex: 1; background: rgba(255,255,255,0.04);
-      border-radius: 12px; padding: 10px;
-      border: 2px solid transparent;
-      transition: border-color 0.3s;
-      position: relative;
+    #bs-ground-opp {
+      position: absolute;
+      right: 80px; bottom: 285px;
+      width: 200px; height: 36px;
+      background: rgba(0,0,0,0.22);
+      border-radius: 50%;
+      filter: blur(8px);
     }
-    .battle-player.active-turn { border-color: #FFD600; box-shadow: 0 0 10px rgba(255,214,0,0.3); }
-    .battle-player.damaged     { animation: shake 0.3s ease; }
-
-    .bp-sprite-wrap {
-      width: 70px; height: 70px;
-      margin: 0 auto 8px;
-      display: flex; align-items:center; justify-content:center;
+    #bs-ground-pl {
+      position: absolute;
+      left: 80px; bottom: 240px;
+      width: 240px; height: 40px;
+      background: rgba(0,0,0,0.22);
+      border-radius: 50%;
+      filter: blur(8px);
     }
-    .bp-sprite { width:64px; height:64px; image-rendering:pixelated; filter:drop-shadow(0 0 6px rgba(255,255,255,0.2)); }
-    .bp-name   { color:#fff; font-size:8px; text-align:center; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .bp-user   { color:#aaa; font-size:6px; text-align:center; margin-bottom:8px; }
 
-    .bp-hp-label { display:flex; justify-content:space-between; margin-bottom:3px; }
-    .bp-hp-text  { color:#aaa; font-size:6px; }
-    .bp-hp-val   { color:#fff; font-size:6px; }
-    .bp-hp-bar   { height:8px; background:#1a1a1a; border-radius:4px; overflow:hidden; border:1px solid #333; }
-    .bp-hp-fill  { height:100%; border-radius:4px; transition: width 0.6s ease, background 0.3s; }
+    /* Sprites */
+    #opp-sprite-zone {
+      position: absolute;
+      right: 160px; top: 20px;
+      width: 190px; height: 190px;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    #opp-sprite {
+      max-width: 170px; max-height: 170px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,0.45));
+    }
 
-    /* Número de daño flotante */
-    .dmg-number {
-      position: absolute; top: 10px; right: 10px;
-      color: #FF4444; font-size: 14px;
-      text-shadow: 0 0 10px rgba(255,68,68,0.8), 2px 2px 0 #000;
-      animation: dmgFloat 1.2s ease forwards;
+    #pl-sprite-zone {
+      position: absolute;
+      left: 120px; top: 140px;
+      width: 230px; height: 230px;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    #pl-sprite {
+      max-width: 210px; max-height: 210px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,0.45));
+    }
+
+    /* HUD boxes */
+    #opp-hud {
+      position: absolute;
+      left: 60px; top: 28px;
+      width: 390px;
+    }
+    #pl-hud {
+      position: absolute;
+      right: 60px; bottom: 132px;
+      width: 390px;
+    }
+
+    .b-hud-box {
+      background: rgba(8,8,14,0.90);
+      border: 2px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 14px 18px 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .b-hud-box.active-turn {
+      border-color: #FFD600;
+      box-shadow: 0 0 18px rgba(255,214,0,0.35), 0 4px 24px rgba(0,0,0,0.6);
+    }
+
+    .b-name-row {
+      display: flex; align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+    .b-poke-name {
+      color: #fff; font-size: 14px; letter-spacing: 1px;
+    }
+    .b-level {
+      color: #aaa; font-size: 8px;
+    }
+    .b-user {
+      color: #5BC8FF; font-size: 7px; margin-bottom: 10px;
+    }
+    .b-hp-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+    }
+    .b-hp-lbl {
+      color: #FFD600; font-size: 8px; letter-spacing: 2px; flex-shrink: 0;
+    }
+    .b-hp-track {
+      flex: 1; height: 11px;
+      background: #0a180a;
+      border-radius: 6px;
+      border: 1px solid #1a361a;
+      overflow: hidden;
+    }
+    .b-hp-fill {
+      height: 100%; border-radius: 6px;
+      transition: width 0.85s cubic-bezier(0.4,0,0.2,1),
+                  background-color 0.5s ease;
+      background: #18C818;
+    }
+    .b-hp-nums {
+      color: #bbb; font-size: 8px; text-align: right; margin-top: 2px;
+    }
+    .b-turn-arrow {
+      color: #FFD600; font-size: 9px; display: none; margin-top: 6px;
+    }
+
+    /* Cuadro de mensajes — parte inferior */
+    #bs-msgbox {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 120px;
+      background: rgba(6,6,10,0.96);
+      border-top: 3px solid rgba(255,255,255,0.08);
+      padding: 18px 60px;
+      display: flex; flex-direction: column; justify-content: center; gap: 8px;
+    }
+    #bs-msg {
+      color: #fff; font-size: 11px; line-height: 1.6;
+      letter-spacing: 0.5px; margin: 0;
+    }
+    #bs-turn-ind {
+      color: #FFD600; font-size: 8px; margin: 0;
+    }
+
+    /* Numero de dano flotante */
+    .bs-dmg {
+      position: absolute;
+      font-size: 26px;
+      color: #FF3333;
+      text-shadow: 0 0 12px rgba(255,50,50,0.9), 2px 2px 0 #000, -1px -1px 0 #000;
       pointer-events: none;
-      z-index: 10;
+      z-index: 35;
+      animation: dmgFloat 1.4s ease forwards;
     }
 
-    /* GIF de ataque (centrado sobre el panel) */
-    #battle-attack-gif {
+    /* GIFs de ataque / inicio */
+    #bs-start-gif, #bs-attack-gif {
       position: absolute;
-      top: 50%; left: 50%;
+      top: 44%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 200px; height: 150px;
+      width: 300px;
       object-fit: contain;
-      display: none;
-      z-index: 20;
-      filter: drop-shadow(0 0 20px rgba(255,200,0,0.8));
-      animation: gifFlash 1.5s ease forwards;
+      display: none; z-index: 28;
+      filter: drop-shadow(0 0 28px rgba(255,210,0,0.9));
     }
 
-    /* GIF de inicio (encima de todo) */
-    #battle-start-gif {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 300px; height: 200px;
-      object-fit: contain;
+    /* Pantalla VS (aparece al inicio del combate) */
+    #bs-vs-screen {
+      position: absolute; inset: 0; z-index: 50;
+      background: linear-gradient(135deg, #000814 0%, #001E3C 100%);
       display: none;
-      z-index: 20;
-      animation: gifFlash 2s ease forwards;
+      align-items: center; justify-content: center; gap: 0;
+    }
+    .vs-side {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+    }
+    .vs-poke { color: #FFD600; font-size: 15px; letter-spacing: 1px; }
+    .vs-user { color: #aaa; font-size: 9px; }
+    #vs-divider {
+      width: 80px; text-align: center;
+      color: #e53935; font-size: 32px;
+      text-shadow: 0 0 20px rgba(229,57,53,0.8);
+    }
+    #bs-vs-screen .vs-side img {
+      width: 120px; height: 120px; image-rendering: pixelated;
+      filter: drop-shadow(0 0 16px rgba(255,255,255,0.3));
     }
 
-    /* Banner de victoria */
-    #battle-victory {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      background: linear-gradient(135deg, rgba(255,214,0,0.15), rgba(255,100,0,0.15));
-      border-top: 2px solid #FFD600;
-      border-radius: 0 0 18px 18px;
-      padding: 10px;
+    /* Pantalla de victoria */
+    #bs-victory {
+      position: absolute; inset: 0; z-index: 45;
+      background: linear-gradient(135deg,
+        rgba(0,0,0,0.82) 0%, rgba(10,5,0,0.88) 100%);
       display: none;
-      text-align: center;
+      flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    #bs-victory-title {
+      color: #FFD600; font-size: 36px; letter-spacing: 4px;
+      text-shadow: 0 0 24px rgba(255,214,0,0.8), 3px 3px 0 #000;
       animation: victoryPulse 1s ease infinite;
     }
-    .victory-gif-wrap { margin-bottom:6px; }
-    #battle-victory-gif { height:60px; object-fit:contain; border-radius:8px; }
-    .victory-text { color:#FFD600; font-size:9px; letter-spacing:2px; }
-    .victory-sub  { color:#aaa; font-size:7px; margin-top:4px; }
+    #bs-victory-sub  { color: #fff; font-size: 14px; text-shadow: 2px 2px 0 #000; }
+    #bs-victory-pts  { color: #FFD600; font-size: 11px; }
+
+    @keyframes victoryPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+
+    /* Animaciones de escena y sprites */
+    @keyframes sceneUp    { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes sceneDown  { from{transform:translateY(0);opacity:1}    to{transform:translateY(110%);opacity:0} }
+    @keyframes spriteFromLeft  { from{transform:translateX(-160px);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes spriteFromRight { from{transform:translateX(160px);opacity:0}  to{transform:translateX(0);opacity:1} }
+    @keyframes vsIn       { from{opacity:0} to{opacity:1} }
+    @keyframes vsOut      { 0%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
+
+    /* Animaciones de combate */
+    @keyframes lunge      { 0%{transform:translateX(0)} 35%{transform:translateX(36px)}  100%{transform:translateX(0)} }
+    @keyframes lungeBack  { 0%{transform:translateX(0)} 35%{transform:translateX(-36px)} 100%{transform:translateX(0)} }
+    @keyframes hitShake   { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+    @keyframes hitFlash   { 0%,100%{filter:drop-shadow(0 10px 16px rgba(0,0,0,0.45))} 25%,75%{filter:brightness(12) drop-shadow(0 0 20px #fff)} 50%{filter:brightness(8) drop-shadow(0 0 10px #fff)} }
+    @keyframes faintDown  { 0%{transform:translateY(0) scaleY(1);opacity:1} 100%{transform:translateY(130px) scaleY(0.2);opacity:0} }
+    @keyframes victoryJump{ 0%,100%{transform:translateY(0)} 25%{transform:translateY(-22px)} 75%{transform:translateY(-10px)} }
+    @keyframes gifFlash   { 0%,100%{opacity:0} 8%,92%{opacity:1} }
+    @keyframes msgAppear  { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -237,59 +357,100 @@
   <div class="media-img-wrapper"><img id="media-gif" src="" alt="media"></div>
 </div>
 
-<!-- ── BATTLE ── -->
-<div id="battle-panel">
+<!-- ══════════════════════════════════════════════════
+     BATTLE SCENE — layout clasico estilo Pokemon Gen4/5
+     ══════════════════════════════════════════════════ -->
+<div id="battle-scene">
 
-  <div class="battle-header">
-    <span class="battle-title">⚔ Combate</span>
-    <span class="battle-turn" id="battle-turn"></span>
+  <!-- Fondos -->
+  <div id="bs-sky"></div>
+  <div id="bs-ground-opp"></div>
+  <div id="bs-ground-pl"></div>
+
+  <!-- Oponente — sprite frontal arriba-derecha -->
+  <div id="opp-sprite-zone">
+    <img id="opp-sprite" src="" alt="oponent">
   </div>
 
-  <div class="battle-players">
-    <!-- Jugador 1 -->
-    <div class="battle-player" id="bp1">
-      <div class="bp-sprite-wrap"><img class="bp-sprite" id="bp1-sprite" src="" alt=""></div>
-      <div class="bp-name" id="bp1-pokemon"></div>
-      <div class="bp-user" id="bp1-user"></div>
-      <div class="bp-hp-label">
-        <span class="bp-hp-text">HP</span>
-        <span class="bp-hp-val" id="bp1-hp-val">0/0</span>
+  <!-- HUD oponente — arriba-izquierda -->
+  <div id="opp-hud">
+    <div class="b-hud-box" id="opp-hud-box">
+      <div class="b-name-row">
+        <span class="b-poke-name" id="opp-poke-name">???</span>
+        <span class="b-level">Lv.50</span>
       </div>
-      <div class="bp-hp-bar"><div class="bp-hp-fill" id="bp1-hp-fill"></div></div>
-    </div>
-
-    <!-- Jugador 2 -->
-    <div class="battle-player" id="bp2">
-      <div class="bp-sprite-wrap"><img class="bp-sprite" id="bp2-sprite" src="" alt=""></div>
-      <div class="bp-name" id="bp2-pokemon"></div>
-      <div class="bp-user" id="bp2-user"></div>
-      <div class="bp-hp-label">
-        <span class="bp-hp-text">HP</span>
-        <span class="bp-hp-val" id="bp2-hp-val">0/0</span>
+      <div class="b-user" id="opp-user">@player2</div>
+      <div class="b-hp-row">
+        <span class="b-hp-lbl">HP</span>
+        <div class="b-hp-track"><div class="b-hp-fill" id="opp-hp-fill"></div></div>
       </div>
-      <div class="bp-hp-bar"><div class="bp-hp-fill" id="bp2-hp-fill"></div></div>
+      <div class="b-hp-nums" id="opp-hp-nums">0 / 0</div>
+      <div class="b-turn-arrow" id="opp-arrow">&#9658; Es tu turno! usa !atacar</div>
     </div>
   </div>
 
-  <!-- GIF de ataque (aparece centrado durante el ataque) -->
-  <img id="battle-attack-gif" src="" alt="attack">
+  <!-- Jugador — sprite trasero abajo-izquierda -->
+  <div id="pl-sprite-zone">
+    <img id="pl-sprite" src="" alt="player">
+  </div>
+
+  <!-- HUD jugador — abajo-derecha -->
+  <div id="pl-hud">
+    <div class="b-hud-box" id="pl-hud-box">
+      <div class="b-name-row">
+        <span class="b-poke-name" id="pl-poke-name">???</span>
+        <span class="b-level">Lv.50</span>
+      </div>
+      <div class="b-user" id="pl-user">@player1</div>
+      <div class="b-hp-row">
+        <span class="b-hp-lbl">HP</span>
+        <div class="b-hp-track"><div class="b-hp-fill" id="pl-hp-fill"></div></div>
+      </div>
+      <div class="b-hp-nums" id="pl-hp-nums">0 / 0</div>
+      <div class="b-turn-arrow" id="pl-arrow">&#9658; Es tu turno! usa !atacar</div>
+    </div>
+  </div>
 
   <!-- GIF de inicio -->
-  <img id="battle-start-gif" src="" alt="start">
+  <img id="bs-start-gif" src="" alt="start">
 
-  <!-- Banner de victoria -->
-  <div id="battle-victory">
-    <div class="victory-gif-wrap"><img id="battle-victory-gif" src="" alt="victory"></div>
-    <div class="victory-text" id="victory-text">¡VICTORIA!</div>
-    <div class="victory-sub" id="victory-sub"></div>
+  <!-- GIF de ataque -->
+  <img id="bs-attack-gif" src="" alt="attack">
+
+  <!-- Cuadro de mensajes -->
+  <div id="bs-msgbox">
+    <p id="bs-msg"></p>
+    <p id="bs-turn-ind"></p>
   </div>
+
+  <!-- Pantalla VS (se muestra al inicio del combate) -->
+  <div id="bs-vs-screen">
+    <div class="vs-side" id="vs-left">
+      <img id="vs-pl-sprite" src="" alt="">
+      <div class="vs-poke" id="vs-pl-poke"></div>
+      <div class="vs-user" id="vs-pl-user"></div>
+    </div>
+    <div id="vs-divider">VS</div>
+    <div class="vs-side" id="vs-right">
+      <img id="vs-opp-sprite" src="" alt="">
+      <div class="vs-poke" id="vs-opp-poke"></div>
+      <div class="vs-user" id="vs-opp-user"></div>
+    </div>
+  </div>
+
+  <!-- Victoria -->
+  <div id="bs-victory">
+    <div id="bs-victory-title">VICTORIA!</div>
+    <div id="bs-victory-sub"></div>
+    <div id="bs-victory-pts">+50 Puntos</div>
+  </div>
+
 </div>
 
 <audio id="pokemon-cry" preload="none"></audio>
 
 <script>
-  // ── CONSTANTES ─────────────────────────────────────────────────
-
+  // ── CONSTANTES ──────────────────────────────────────────────────────────
   const TYPE_COLORS = {
     fire:'#FF6B35',water:'#4FC3F7',grass:'#66BB6A',electric:'#FFD600',
     psychic:'#F06292',ice:'#80DEEA',dragon:'#7E57C2',dark:'#5D4037',
@@ -299,8 +460,7 @@
   };
   const RARITY_COLORS = { comun:'#9E9E9E', raro:'#4FC3F7', epico:'#AB47BC', legendario:'#FFD600' };
 
-  // ── COLA DE EVENTOS (pokédex, anime, media — NO batalla) ────────
-
+  // ── COLA DE EVENTOS (pokedex, anime, media) ────────────────────────────
   const eventQueue   = [];
   let isShowingEvent = false;
 
@@ -329,8 +489,7 @@
     }, duration);
   }
 
-  // ── POKÉDEX ─────────────────────────────────────────────────────
-
+  // ── POKÉDEX ─────────────────────────────────────────────────────────────
   const pokedexPanel = document.getElementById('pokedex-panel');
   const sprite       = document.getElementById('pokemon-sprite');
   const cry          = document.getElementById('pokemon-cry');
@@ -348,7 +507,7 @@
   function showPokemon(data) {
     document.getElementById('pokemon-number').textContent  = '#' + String(data.id).padStart(3,'0');
     document.getElementById('pokemon-name').textContent    = data.name;
-    document.getElementById('pokemon-triggered').textContent = '🔴 lanzado por @' + data.triggeredBy;
+    document.getElementById('pokemon-triggered').textContent = 'lanzado por @' + data.triggeredBy;
     loadSprite(data);
     const typesEl = document.getElementById('pokemon-types');
     typesEl.innerHTML = '';
@@ -359,23 +518,22 @@
     });
     [{bar:'bar-hp',val:'val-hp',v:data.stats.hp},{bar:'bar-atk',val:'val-atk',v:data.stats.attack},
       {bar:'bar-def',val:'val-def',v:data.stats.defense},{bar:'bar-spd',val:'val-spd',v:data.stats.speed}]
-            .forEach(s => {
-              document.getElementById(s.val).textContent = s.v;
-              const fill = document.getElementById(s.bar); fill.style.width='0%';
-              setTimeout(() => { fill.style.width = Math.min(100,(s.v/255)*100)+'%'; }, 400);
-            });
+      .forEach(s => {
+        document.getElementById(s.val).textContent = s.v;
+        const fill = document.getElementById(s.bar); fill.style.width='0%';
+        setTimeout(() => { fill.style.width = Math.min(100,(s.v/255)*100)+'%'; }, 400);
+      });
     try { cry.src=data.cryUrl; cry.volume=0.1; cry.play().catch(()=>{}); } catch(e) {}
     showPanel(pokedexPanel, 12000, onEventFinished);
   }
 
-  // ── ANIME ───────────────────────────────────────────────────────
-
+  // ── ANIME ───────────────────────────────────────────────────────────────
   const animePanel = document.getElementById('anime-panel');
 
   function showAnime(data) {
     document.getElementById('anime-name').textContent     = data.name;
     document.getElementById('anime-series').textContent   = data.series;
-    document.getElementById('anime-triggered').textContent = '🎮 invocado por @' + data.triggeredBy;
+    document.getElementById('anime-triggered').textContent = 'invocado por @' + data.triggeredBy;
     const r = data.rarity || 'comun', rc = RARITY_COLORS[r] || '#9E9E9E';
     document.getElementById('anime-rarity-dot').style.background  = rc;
     document.getElementById('anime-rarity-dot').style.boxShadow   = `0 0 8px ${rc}`;
@@ -390,13 +548,12 @@
     showPanel(animePanel, 10000, onEventFinished);
   }
 
-  // ── MEDIA ───────────────────────────────────────────────────────
-
+  // ── MEDIA ───────────────────────────────────────────────────────────────
   const mediaPanel = document.getElementById('media-panel');
 
   function showMedia(data) {
     document.getElementById('media-title').textContent     = data.title;
-    document.getElementById('media-triggered').textContent = '🎮 invocado por @' + data.triggeredBy;
+    document.getElementById('media-triggered').textContent = 'invocado por @' + data.triggeredBy;
     document.getElementById('media-gif').src               = data.mediaUrl;
     const c = data.accentColor || '#e53935';
     mediaPanel.style.border    = '3px solid ' + c;
@@ -406,172 +563,256 @@
     showPanel(mediaPanel, (data.durationSeconds||8)*1000, onEventFinished);
   }
 
-  // ── BATTLE ──────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // BATTLE — logica del combate
+  // ══════════════════════════════════════════════════════════════════════
 
-  const battlePanel      = document.getElementById('battle-panel');
-  const battleAttackGif  = document.getElementById('battle-attack-gif');
-  const battleStartGif   = document.getElementById('battle-start-gif');
-  const battleVictory    = document.getElementById('battle-victory');
-  const battleVictoryGif = document.getElementById('battle-victory-gif');
+  const battleScene   = document.getElementById('battle-scene');
+  const oppSpriteEl   = document.getElementById('opp-sprite');
+  const plSpriteEl    = document.getElementById('pl-sprite');
+  const bsStartGif    = document.getElementById('bs-start-gif');
+  const bsAttackGif   = document.getElementById('bs-attack-gif');
+  const bsVsScreen    = document.getElementById('bs-vs-screen');
+  const bsVictory     = document.getElementById('bs-victory');
+  let   battleState   = null;
 
-  // Estado local del combate (para saber qué jugador es player1/player2)
-  let battleState = null;
-
+  // Color de barra HP estilo Pokemon
   function hpColor(pct) {
-    if (pct > 0.5) return '#66BB6A';
-    if (pct > 0.25) return '#FFD600';
-    return '#EF5350';
+    if (pct > 0.50) return '#18C818';
+    if (pct > 0.20) return '#F8D030';
+    return '#F02020';
   }
 
-  function updateHpBar(fillId, valId, hp, maxHp) {
+  function updateHpBar(fillId, numsId, hp, maxHp) {
     const pct  = Math.max(0, hp / maxHp);
     const fill = document.getElementById(fillId);
-    const val  = document.getElementById(valId);
-    fill.style.width      = (pct * 100) + '%';
-    fill.style.background = hpColor(pct);
-    val.textContent       = hp + '/' + maxHp;
+    const nums = document.getElementById(numsId);
+    fill.style.width           = (pct * 100) + '%';
+    fill.style.backgroundColor = hpColor(pct);
+    nums.textContent            = hp + ' / ' + maxHp;
   }
 
-  function showDamageNumber(playerId, damage) {
-    const player = document.getElementById(playerId);
-    const dmg    = document.createElement('div');
-    dmg.className   = 'dmg-number';
-    dmg.textContent = '-' + damage;
-    player.appendChild(dmg);
-    setTimeout(() => dmg.remove(), 1300);
+  function setActiveTurn(turnName) {
+    if (!battleState) return;
+    const p1Active = turnName === battleState.player1.name;
+    document.getElementById('opp-hud-box').classList.toggle('active-turn',  p1Active ? false : true);
+    document.getElementById('pl-hud-box').classList.toggle('active-turn',   p1Active);
+    document.getElementById('opp-arrow').style.display = p1Active ? 'none' : 'block';
+    document.getElementById('pl-arrow').style.display  = p1Active ? 'block' : 'none';
   }
 
-  function setBattleTurn(name) {
-    document.getElementById('battle-turn').textContent = '▶ @' + name;
-    // Resaltar el jugador activo
-    const p1Active = battleState && name === battleState.player1.name;
-    document.getElementById('bp1').classList.toggle('active-turn', p1Active);
-    document.getElementById('bp2').classList.toggle('active-turn', !p1Active);
+  function setMsg(text, turnName) {
+    const msg  = document.getElementById('bs-msg');
+    const turn = document.getElementById('bs-turn-ind');
+    msg.style.animation = 'none'; void msg.offsetHeight;
+    msg.style.animation = 'msgAppear 0.25s ease';
+    msg.textContent  = text;
+    turn.textContent = turnName ? '> Turno de @' + turnName + ' — usa !atacar' : '';
   }
 
-  // ── battle_start ──
+  function showDmgNumber(isOpp, damage) {
+    const el = document.createElement('div');
+    el.className   = 'bs-dmg';
+    el.textContent = '-' + damage;
+    // Posicion fija segun el lado
+    el.style.position = 'absolute';
+    if (isOpp) {
+      el.style.right = '220px';
+      el.style.top   = '120px';
+    } else {
+      el.style.left = '260px';
+      el.style.top  = '220px';
+    }
+    battleScene.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+  }
+
+  // ── battle_start ────────────────────────────────────────────────────────
 
   function onBattleStart(data) {
     battleState = data;
-    battleVictory.style.display = 'none';
 
-    // Rellenar jugador 1
-    document.getElementById('bp1-sprite').src = data.player1.spriteUrl;
-    document.getElementById('bp1-pokemon').textContent = data.player1.pokemon;
-    document.getElementById('bp1-user').textContent    = '@' + data.player1.name;
-    updateHpBar('bp1-hp-fill', 'bp1-hp-val', data.player1.hp, data.player1.maxHp);
+    // Rellenar sprites y HUD
+    document.getElementById('opp-poke-name').textContent = data.player2.pokemon;
+    document.getElementById('opp-user').textContent      = '@' + data.player2.name;
+    updateHpBar('opp-hp-fill', 'opp-hp-nums', data.player2.hp, data.player2.maxHp);
+    oppSpriteEl.src     = data.player2.spriteUrl;
+    oppSpriteEl.onerror = () => {};
 
-    // Rellenar jugador 2
-    document.getElementById('bp2-sprite').src = data.player2.spriteUrl;
-    document.getElementById('bp2-pokemon').textContent = data.player2.pokemon;
-    document.getElementById('bp2-user').textContent    = '@' + data.player2.name;
-    updateHpBar('bp2-hp-fill', 'bp2-hp-val', data.player2.hp, data.player2.maxHp);
+    document.getElementById('pl-poke-name').textContent = data.player1.pokemon;
+    document.getElementById('pl-user').textContent      = '@' + data.player1.name;
+    updateHpBar('pl-hp-fill', 'pl-hp-nums', data.player1.hp, data.player1.maxHp);
+    plSpriteEl.src     = data.player1.backSpriteUrl || data.player1.spriteUrl;
+    plSpriteEl.onerror = () => { plSpriteEl.src = data.player1.spriteUrl; };
 
-    // Turno inicial = player1 (el retador)
-    setBattleTurn(data.player1.name);
+    // Ocultar victoria si quedaba del combate anterior
+    bsVictory.style.display = 'none';
 
-    // Mostrar panel
-    battlePanel.style.display   = 'block';
-    battlePanel.style.animation = 'battleSlideIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275)';
+    // Mostrar escena
+    battleScene.style.display   = 'block';
+    battleScene.style.animation = 'sceneUp 0.55s cubic-bezier(0.175,0.885,0.32,1.275)';
 
-    // GIF de inicio si hay
+    // Pantalla VS rapida
+    document.getElementById('vs-pl-sprite').src  = data.player1.backSpriteUrl || data.player1.spriteUrl;
+    document.getElementById('vs-opp-sprite').src = data.player2.spriteUrl;
+    document.getElementById('vs-pl-poke').textContent  = data.player1.pokemon;
+    document.getElementById('vs-pl-user').textContent  = '@' + data.player1.name;
+    document.getElementById('vs-opp-poke').textContent = data.player2.pokemon;
+    document.getElementById('vs-opp-user').textContent = '@' + data.player2.name;
+    bsVsScreen.style.display   = 'flex';
+    bsVsScreen.style.animation = 'vsIn 0.3s ease';
+
+    // Tras 2.2s, ocultar VS y animar entrada de sprites
+    setTimeout(() => {
+      bsVsScreen.style.animation = 'vsOut 0.6s ease forwards';
+      setTimeout(() => {
+        bsVsScreen.style.display = 'none';
+        // Sprites entran desde los laterales
+        document.getElementById('pl-sprite-zone').style.animation  = 'spriteFromLeft  0.6s ease both';
+        document.getElementById('opp-sprite-zone').style.animation = 'spriteFromRight 0.6s ease both';
+      }, 600);
+    }, 2200);
+
+    // Turno inicial
+    setTimeout(() => {
+      setActiveTurn(data.currentTurn || data.player1.name);
+      setMsg('Que hara ' + data.player1.pokemon + ' de @' + data.player1.name + '?',
+             data.currentTurn || data.player1.name);
+    }, 3000);
+
+    // GIF de inicio
     if (data.startGifUrl && data.startGifUrl.length > 5) {
-      battleStartGif.src     = data.startGifUrl;
-      battleStartGif.style.display = 'block';
-      battleStartGif.style.animation = 'gifFlash 2s ease forwards';
-      setTimeout(() => { battleStartGif.style.display = 'none'; }, 2000);
+      bsStartGif.src     = data.startGifUrl;
+      bsStartGif.style.display    = 'block';
+      bsStartGif.style.animation  = 'gifFlash 2s ease forwards';
+      setTimeout(() => { bsStartGif.style.display = 'none'; }, 2000);
     }
   }
 
-  // ── battle_attack ──
+  // ── battle_attack ────────────────────────────────────────────────────────
 
   function onBattleAttack(data) {
-    // Actualizar estado local
-    if (battleState) {
-      battleState.player1.hp = data.player1.hp;
-      battleState.player2.hp = data.player2.hp;
-    }
+    if (!battleState) return;
 
-    // Actualizar barras
-    updateHpBar('bp1-hp-fill', 'bp1-hp-val', data.player1.hp, data.player1.maxHp);
-    updateHpBar('bp2-hp-fill', 'bp2-hp-val', data.player2.hp, data.player2.maxHp);
+    const p1Attacks = data.attacker === battleState.player1.name;
+    const attackerZoneId = p1Attacks ? 'pl-sprite-zone' : 'opp-sprite-zone';
+    const defenderZoneId = p1Attacks ? 'opp-sprite-zone' : 'pl-sprite-zone';
+    const defenderSpriteEl = p1Attacks ? oppSpriteEl : plSpriteEl;
 
-    // Shake + número de daño en el defensor
-    const defIsP1 = battleState && data.defender === battleState.player1.name;
-    const defId   = defIsP1 ? 'bp1' : 'bp2';
-    document.getElementById(defId).classList.add('damaged');
-    setTimeout(() => document.getElementById(defId).classList.remove('damaged'), 400);
-    showDamageNumber(defId, data.damage);
+    // 1. Atacante se lanza hacia el oponente
+    const attackZone = document.getElementById(attackerZoneId);
+    attackZone.style.animation = p1Attacks ? 'lunge 0.38s ease' : 'lungeBack 0.38s ease';
+    setTimeout(() => { attackZone.style.animation = ''; }, 380);
 
-    // Shake del panel completo
-    battlePanel.classList.add('shake');
-    setTimeout(() => battlePanel.classList.remove('shake'), 400);
-
-    // GIF de ataque
+    // 2. GIF de ataque
     if (data.attackGifUrl && data.attackGifUrl.length > 5) {
-      battleAttackGif.src            = data.attackGifUrl;
-      battleAttackGif.style.display  = 'block';
-      battleAttackGif.style.animation = 'gifFlash 1.5s ease forwards';
-      setTimeout(() => { battleAttackGif.style.display = 'none'; }, 1500);
+      bsAttackGif.src            = data.attackGifUrl;
+      bsAttackGif.style.display  = 'block';
+      bsAttackGif.style.animation = 'gifFlash 1.2s ease forwards';
+      setTimeout(() => { bsAttackGif.style.display = 'none'; }, 1200);
     }
 
-    // Siguiente turno: el que no atacó
-    if (battleState) {
-      const nextTurn = data.attacker === battleState.player1.name
-              ? battleState.player2.name : battleState.player1.name;
-      setTimeout(() => setBattleTurn(nextTurn), 600);
+    // 3. Golpe en el defensor (con delay)
+    setTimeout(() => {
+      const defZone = document.getElementById(defenderZoneId);
+      defZone.style.animation           = 'hitShake 0.45s ease';
+      defenderSpriteEl.style.animation  = 'hitFlash 0.5s ease';
+      setTimeout(() => {
+        defZone.style.animation          = '';
+        defenderSpriteEl.style.animation = '';
+      }, 500);
+      showDmgNumber(!p1Attacks, data.damage);
+    }, 280);
+
+    // 4. Actualizar barras HP
+    setTimeout(() => {
+      updateHpBar('opp-hp-fill', 'opp-hp-nums', data.player2.hp, data.player2.maxHp);
+      updateHpBar('pl-hp-fill',  'pl-hp-nums',  data.player1.hp, data.player1.maxHp);
+    }, 320);
+
+    // 5. Mensaje de ataque
+    const atkPoke = p1Attacks ? battleState.player1.pokemon : battleState.player2.pokemon;
+    const defPoke = p1Attacks ? battleState.player2.pokemon : battleState.player1.pokemon;
+    setMsg(atkPoke + ' de @' + data.attacker + ' ataco a ' + defPoke + '! -' + data.damage + ' HP',
+           null);
+
+    // 6. Comprobacion de KO
+    const p1Fainted  = data.player1.hp <= 0;
+    const p2Fainted  = data.player2.hp <= 0;
+    if (p1Fainted) setTimeout(() => faintSprite('pl'),  500);
+    if (p2Fainted) setTimeout(() => faintSprite('opp'), 500);
+
+    // 7. Turno siguiente (si no ha terminado)
+    if (!p1Fainted && !p2Fainted) {
+      setTimeout(() => {
+        setActiveTurn(data.currentTurn);
+        setMsg('Que hara ' + (data.currentTurn === battleState.player1.name
+                 ? battleState.player1.pokemon : battleState.player2.pokemon)
+               + '?', data.currentTurn);
+      }, 900);
     }
   }
 
-  // ── battle_end ──
+  function faintSprite(side) {
+    const zone = document.getElementById(side + '-sprite-zone');
+    zone.style.animation = 'faintDown 0.85s ease forwards';
+    setTimeout(() => { zone.style.opacity = '0'; }, 850);
+  }
+
+  // ── battle_end ────────────────────────────────────────────────────────────
 
   function onBattleEnd(data) {
-    // Actualizar turno a vacío
-    document.getElementById('battle-turn').textContent = '';
-    document.getElementById('bp1').classList.remove('active-turn');
-    document.getElementById('bp2').classList.remove('active-turn');
+    // Saltar el turno
+    setActiveTurn('');
+    document.getElementById('opp-arrow').style.display = 'none';
+    document.getElementById('pl-arrow').style.display  = 'none';
 
-    // Mostrar banner de victoria
-    if (data.victoryGifUrl && data.victoryGifUrl.length > 5) {
-      battleVictoryGif.src           = data.victoryGifUrl;
-      battleVictoryGif.style.display = 'block';
-    } else {
-      battleVictoryGif.style.display = 'none';
-    }
-
-    document.getElementById('victory-text').textContent = data.fled
-            ? '🏳️ ABANDONO'
-            : '🏆 ¡VICTORIA!';
-    document.getElementById('victory-sub').textContent = '@' + data.winner + ' gana el combate!';
-
-    battleVictory.style.display = 'block';
-
-    // Ocultar panel tras 5 segundos
+    // Animacion de victoria en el sprite ganador
+    const p1Won    = data.winner === battleState.player1.name;
+    const winZone  = document.getElementById(p1Won ? 'pl-sprite-zone' : 'opp-sprite-zone');
     setTimeout(() => {
-      battlePanel.style.animation = 'battleSlideOut 0.5s ease forwards';
+      winZone.style.animation = 'victoryJump 0.7s ease 3';
+    }, 600);
+
+    setMsg(data.fled
+      ? '@' + data.loser + ' huyo del combate!'
+      : '!El combate termino! @' + data.winner + ' gana!', null);
+
+    // Pantalla de victoria
+    setTimeout(() => {
+      document.getElementById('bs-victory-title').textContent = data.fled ? 'ABANDONO' : 'VICTORIA!';
+      document.getElementById('bs-victory-sub').textContent   = '@' + data.winner + ' gana el combate';
+      document.getElementById('bs-victory-pts').textContent   = '+50 puntos conseguidos';
+      bsVictory.style.display = 'flex';
+    }, 1800);
+
+    // Cerrar escena tras 7 segundos
+    setTimeout(() => {
+      battleScene.style.animation = 'sceneDown 0.6s ease forwards';
       setTimeout(() => {
-        battlePanel.style.display   = 'none';
-        battleVictory.style.display = 'none';
+        battleScene.style.display   = 'none';
+        bsVictory.style.display     = 'none';
+        // Restaurar visibilidad de sprites para el proximo combate
+        document.getElementById('pl-sprite-zone').style.opacity  = '1';
+        document.getElementById('opp-sprite-zone').style.opacity = '1';
         battleState = null;
-      }, 500);
-    }, 5000);
+      }, 650);
+    }, 7000);
   }
 
-  // ── WEBSOCKET ───────────────────────────────────────────────────
+  // ── WEBSOCKET ─────────────────────────────────────────────────────────────
 
   function connectWebSocket() {
     const ws = new WebSocket('ws://localhost:8765');
-    ws.onopen    = () => console.log('Overlay conectado al bot ✅');
+    ws.onopen    = () => console.log('Overlay conectado al bot');
     ws.onclose   = () => { console.log('Reconectando en 3s...'); setTimeout(connectWebSocket, 3000); };
     ws.onerror   = (e) => console.error('WebSocket error', e);
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        // Eventos de batalla: fuera de la cola, panel persistente
         if (data.type === 'battle_start')  { onBattleStart(data);  return; }
         if (data.type === 'battle_attack') { onBattleAttack(data); return; }
         if (data.type === 'battle_end')    { onBattleEnd(data);    return; }
-        // Resto: van a la cola
         enqueue(data);
       } catch(err) {
         console.error('Error parseando mensaje', err);

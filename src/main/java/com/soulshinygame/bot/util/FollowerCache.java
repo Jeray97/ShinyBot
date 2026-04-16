@@ -27,6 +27,8 @@ public class FollowerCache {
     private final TwitchClient client;
     private final String broadcasterId;
     private final String accessToken;
+    // Si la API falla (scope incorrecto), desactivamos las llamadas para no spamear logs
+    private volatile boolean apiAvailable = true;
 
     public FollowerCache(TwitchClient client, String broadcasterId) {
         this.client        = client;
@@ -40,14 +42,16 @@ public class FollowerCache {
         // El broadcaster siempre tiene acceso — la API nunca lo devuelve como seguidor
         if (userId.equals(broadcasterId)) return true;
 
-        // Consultar caché
+        // Si la API no esta disponible (scope incorrecto), permitir acceso directamente
+        if (!apiAvailable) return true;
+
+        // Consultar cache
         CacheEntry entry = cache.get(userId);
         if (entry != null && System.currentTimeMillis() - entry.timestamp < CACHE_TTL_MS) {
             return entry.isFollower;
         }
 
         try {
-            // La llamada necesita el token del broadcaster (primer parámetro)
             boolean follows = client.getHelix()
                     .getChannelFollowers(accessToken, broadcasterId, userId, 1, null)
                     .execute()
@@ -58,8 +62,14 @@ public class FollowerCache {
             return follows;
 
         } catch (Exception e) {
-            log.warn("Error comprobando seguidor {}: {}", userId, e.getMessage());
-            // En caso de error de API, permitir el acceso para no bloquear injustamente
+            // Desactivar la API para no repetir el error en cada comando
+            apiAvailable = false;
+            log.error("=================================================");
+            log.error("FollowerCache: la API de seguidores fallo.");
+            log.error("El token necesita el scope: moderator:read:followers");
+            log.error("Regenera el BOT_ACCESS_TOKEN con ese scope.");
+            log.error("Hasta entonces el check de seguidores esta desactivado.");
+            log.error("=================================================");
             return true;
         }
     }
