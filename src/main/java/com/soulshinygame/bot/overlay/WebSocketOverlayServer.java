@@ -18,6 +18,7 @@ public class WebSocketOverlayServer extends WebSocketServer {
 
     public WebSocketOverlayServer(int port) {
         super(new InetSocketAddress(port));
+        setReuseAddr(true);
     }
 
     @Override
@@ -39,7 +40,11 @@ public class WebSocketOverlayServer extends WebSocketServer {
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-        log.error("Error en WebSocket", ex);
+        if (conn == null && ex instanceof java.net.BindException) {
+            log.error("Puerto {} en uso — cierra la instancia anterior del bot o libera el puerto.", getPort());
+        } else {
+            log.error("Error en WebSocket", ex);
+        }
     }
 
     @Override

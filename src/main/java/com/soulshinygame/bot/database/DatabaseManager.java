@@ -136,6 +136,32 @@ public class DatabaseManager {
         }
     }
 
+    /** Lista completa de coleccionables (con itemId) de un usuario en una categoría, ordenada por itemId */
+    public List<UserCollectible> getCollectibles(String username, String collectionType) {
+        try {
+            QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
+            qb.where().eq("username", username).and().eq("collectionType", collectionType);
+            qb.orderBy("itemId", true);
+            return qb.query();
+        } catch (SQLException e) {
+            log.error("Error obteniendo coleccionables de {}", username, e);
+            return List.of();
+        }
+    }
+
+    /** Todos los coleccionables de un usuario que NO sean de una categoría concreta (ej. todo excepto "pokemon") */
+    public List<UserCollectible> getCollectiblesExcluding(String username, String excludedType) {
+        try {
+            QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
+            qb.where().eq("username", username).and().ne("collectionType", excludedType);
+            qb.orderBy("collectionType", true);
+            return qb.query();
+        } catch (SQLException e) {
+            log.error("Error obteniendo coleccionables de {}", username, e);
+            return List.of();
+        }
+    }
+
     /** Top usuarios por tamaño de colección */
     public String getCollectionTop(String collectionType, int limit) {
         try {

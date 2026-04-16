@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 
 /**
@@ -25,43 +26,61 @@ public class OverlayHttpServer {
     }
 
     public void start() {
-        try {
-            server = HttpServer.create(new InetSocketAddress(port), 0);
+        int maxAttempts = 4;
+        int delayMs = 2000;
 
-            // Sirve el overlay.html desde resources/
-            server.createContext("/", exchange -> {
-                String path = exchange.getRequestURI().getPath();
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                server = HttpServer.create(new InetSocketAddress(port), 0);
 
-                // Solo servimos la raíz o /overlay.html
-                String resourcePath = "/overlay.html";
+                // Sirve el overlay.html desde resources/
+                server.createContext("/", exchange -> {
+                    String resourcePath = "/overlay.html";
 
-                try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
-                    if (is == null) {
-                        String error = "overlay.html no encontrado en el JAR";
-                        exchange.sendResponseHeaders(404, error.length());
-                        try (OutputStream os = exchange.getResponseBody()) {
-                            os.write(error.getBytes());
+                    try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
+                        if (is == null) {
+                            String error = "overlay.html no encontrado en el JAR";
+                            exchange.sendResponseHeaders(404, error.length());
+                            try (OutputStream os = exchange.getResponseBody()) {
+                                os.write(error.getBytes());
+                            }
+                            return;
                         }
-                        return;
-                    }
 
-                    byte[] bytes = is.readAllBytes();
-                    exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
-                    exchange.sendResponseHeaders(200, bytes.length);
-                    try (OutputStream os = exchange.getResponseBody()) {
-                        os.write(bytes);
+                        byte[] bytes = is.readAllBytes();
+                        exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
+                        exchange.sendResponseHeaders(200, bytes.length);
+                        try (OutputStream os = exchange.getResponseBody()) {
+                            os.write(bytes);
+                        }
                     }
+                });
+
+                server.setExecutor(null);
+                server.start();
+                log.info("Servidor HTTP del overlay arrancado en http://localhost:{}", port);
+                log.info("Configura OBS Browser Source con URL: http://localhost:{}", port);
+                return;
+
+            } catch (BindException e) {
+                if (attempt < maxAttempts) {
+                    log.warn("Puerto {} en uso, reintentando en {}s... (intento {}/{})",
+                            port, delayMs / 1000, attempt, maxAttempts);
+                    try {
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrumpido esperando puerto " + port, ie);
+                    }
+                } else {
+                    log.error("Puerto {} sigue ocupado tras {} intentos. " +
+                            "Cierra el proceso que lo usa (p.ej. otra instancia del bot).", port, maxAttempts);
+                    throw new RuntimeException("Puerto " + port + " en uso", e);
                 }
-            });
-
-            server.setExecutor(null);
-            server.start();
-            log.info("Servidor HTTP del overlay arrancado en http://localhost:{}", port);
-            log.info("Configura OBS Browser Source con URL: http://localhost:{}", port);
-
-        } catch (IOException e) {
-            log.error("Error arrancando el servidor HTTP del overlay", e);
-            throw new RuntimeException(e);
+            } catch (IOException e) {
+                log.error("Error arrancando el servidor HTTP del overlay", e);
+                throw new RuntimeException(e);
+            }
         }
     }
 

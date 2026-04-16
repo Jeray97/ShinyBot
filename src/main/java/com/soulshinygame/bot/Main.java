@@ -53,12 +53,22 @@ public class Main {
                 .withEnableHelix(true)
                 .build();
 
-        String channel = env.get("CHANNEL_NAME");
+        String channel     = env.get("CHANNEL_NAME");
+        String accessToken = env.get("BOT_ACCESS_TOKEN", "").replace("oauth:", "");
         client.getChat().joinChannel(channel);
 
-        String broadcasterId = client.getHelix()
-                .getUsers(null, null, List.of(channel))
-                .execute().getUsers().get(0).getId();
+        String broadcasterId;
+        try {
+            broadcasterId = client.getHelix()
+                    .getUsers(accessToken, null, List.of(channel))
+                    .execute().getUsers().get(0).getId();
+            log.info("Broadcaster ID de #{}: {}", channel, broadcasterId);
+        } catch (Exception e) {
+            log.error("No se pudo obtener el broadcaster ID de '{}'. " +
+                      "Revisa CLIENT_ID, CLIENT_SECRET y BOT_ACCESS_TOKEN en el .env", channel, e);
+            client.close();
+            return;
+        }
 
         // Utilidades compartidas
         FollowerCache followerCache = new FollowerCache(client, broadcasterId);
@@ -68,7 +78,7 @@ public class Main {
         // REGISTRO DE COMANDOS
         // ═══════════════════════════════════════════════════════════════
 
-        CommandRegistry registry = new CommandRegistry(client, channel);
+        CommandRegistry registry = new CommandRegistry(client, channel, followerCache);
 
         registry
                 .register(new HolaCommand())

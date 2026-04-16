@@ -2,6 +2,7 @@ package com.soulshinygame.bot.commands;
 
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
+import com.soulshinygame.bot.util.FollowerCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 /**
  * Registro central de comandos.
  * Gestiona el despacho y el cooldown de forma automática para todos los comandos.
+ * Requiere que el usuario siga el canal para usar cualquier comando.
  */
 public class CommandRegistry {
 
@@ -21,14 +23,16 @@ public class CommandRegistry {
 
     private final TwitchClient client;
     private final String channel;
+    private final FollowerCache followerCache;
 
     private final Map<String, Command> commands = new HashMap<>();
     // cooldown: usuario+comando -> timestamp del último uso
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
 
-    public CommandRegistry(TwitchClient client, String channel) {
-        this.client = client;
-        this.channel = channel;
+    public CommandRegistry(TwitchClient client, String channel, FollowerCache followerCache) {
+        this.client        = client;
+        this.channel       = channel;
+        this.followerCache = followerCache;
     }
 
     // !pokemon.pokedex
@@ -50,6 +54,13 @@ public class CommandRegistry {
             String commandName = parts[0].toLowerCase();
             Command command = commands.get(commandName);
             if (command == null) return;
+
+            // Comprobar que sigue el canal
+            if (!followerCache.isFollower(event.getUser().getId())) {
+                client.getChat().sendMessage(channel,
+                    "@" + event.getUser().getName() + " ¡Necesitas seguir el canal para usar los comandos! 💜 /follow");
+                return;
+            }
 
             // Comprobar cooldown por usuario
             if (isOnCooldown(event.getUser().getName(), commandName, command.getCooldownMs())) {
