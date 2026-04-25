@@ -1,14 +1,13 @@
 plugins {
     java
     application
+    kotlin("jvm")
 }
 
 group = "com.soulshinygame.bot"
 version = "1.0.0"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType<JavaCompile> {
@@ -30,6 +29,7 @@ dependencies {
     implementation("io.github.cdimascio:dotenv-java:3.0.0")
     implementation("org.java-websocket:Java-WebSocket:1.5.6")
     implementation("org.slf4j:slf4j-simple:2.0.12")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 // Fat JAR — incluye todas las dependencias y el manifest correcto
@@ -46,4 +46,7 @@ tasks.jar {
         if (it.isDirectory) it else zipTree(it)
     })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+kotlin {
+    jvmToolchain(17)
 }

@@ -86,7 +86,8 @@ public class Main {
                 .register(new DadosCommand(db))
                 .register(new ColeccionCommand(db))
                 .register(new PokedexCommand(overlayServer, db, followerCache, dailyLimit))
-                .register(new AnimeCommand(overlayServer, db, followerCache, dailyLimit));
+                .register(new AnimeCommand(overlayServer, db, followerCache, dailyLimit))
+                .register(new PaquitoCommand(overlayServer));
 
         // Comandos de media desde media_commands.json (sin recompilar)
         new MediaCommandsLoader(overlayServer, db).loadInto(registry);

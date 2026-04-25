@@ -302,6 +302,31 @@
     @keyframes victoryJump{ 0%,100%{transform:translateY(0)} 25%{transform:translateY(-22px)} 75%{transform:translateY(-10px)} }
     @keyframes gifFlash   { 0%,100%{opacity:0} 8%,92%{opacity:1} }
     @keyframes msgAppear  { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ── VIDEO (!paquito) ── */
+    #video-panel {
+      position: absolute;
+      bottom: 40px; left: 40px;
+      width: 480px;
+      background: rgba(8,8,8,0.95);
+      border: 3px solid #FF6B35;
+      border-radius: 20px;
+      padding: 14px;
+      display: none;
+      box-shadow: 0 0 40px rgba(255,107,53,0.6);
+      z-index: 40;
+    }
+    .video-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px; padding-bottom: 10px;
+      border-bottom: 2px solid #FF6B35;
+    }
+    .video-title     { color:#FF6B35; font-size:10px; letter-spacing:2px; text-transform:uppercase; flex:1; }
+    .video-triggered { color:#aaa; font-size:7px; }
+    #paquito-video   { width:100%; border-radius:12px; max-height:320px; object-fit:cover; display:block; }
+
+    @keyframes videoIn  { from{transform:scale(0.85) translateY(30px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+    @keyframes videoOut { from{opacity:1;transform:scale(1)} to{opacity:0;transform:scale(0.85)} }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -445,6 +470,36 @@
     <div id="bs-victory-pts">+50 Puntos</div>
   </div>
 
+</div>
+
+<!-- ── VIDEO (!paquito) ── -->
+<div id="video-panel">
+  <div class="video-header">
+    <span class="video-title">🐾 Paquito</span>
+    <span class="video-triggered" id="video-triggered"></span>
+  </div>
+  <video id="paquito-video" playsinline>
+    <source id="paquito-source" src="" type="video/mp4">
+  </video>
+</div>
+
+<!-- Botón de activación de audio (solo visible hasta que el usuario hace clic) -->
+<div id="audio-unlock" style="
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.75); cursor: pointer;
+" onclick="unlockAudio()">
+  <div style="
+    background: #e53935; border-radius: 16px; padding: 20px 36px;
+    font-family: 'Press Start 2P', monospace; font-size: 12px;
+    color: #fff; text-align: center; letter-spacing: 1px;
+    box-shadow: 0 0 30px rgba(229,57,53,0.6);
+  ">
+    🔊 Clic para activar audio del overlay
+    <div style="font-size:8px;color:#ffb3b3;margin-top:10px;">
+      Solo necesitas hacer esto una vez
+    </div>
+  </div>
 </div>
 
 <audio id="pokemon-cry" preload="none"></audio>
@@ -800,6 +855,77 @@
     }, 7000);
   }
 
+  // ── AUDIO UNLOCK ──────────────────────────────────────────────────────────
+  // Chrome bloquea autoplay con sonido hasta que el usuario interactúa.
+  // El botón de unlock hace esa interacción una sola vez.
+
+  let audioUnlocked = false;
+
+  function unlockAudio() {
+    audioUnlocked = true;
+    document.getElementById('audio-unlock').style.display = 'none';
+    console.log('Audio desbloqueado ✅');
+  }
+
+  // ── VIDEO (!paquito) ─────────────────────────────────────────────────────
+
+  const videoPanel   = document.getElementById('video-panel');
+  const paquitoVideo = document.getElementById('paquito-video');
+  const paquitoSrc   = document.getElementById('paquito-source');
+  let videoTimeout   = null;
+
+  function showVideo(data) {
+    if (videoTimeout) clearTimeout(videoTimeout);
+
+    document.getElementById('video-triggered').textContent = 'invocado por @' + data.triggeredBy;
+
+    // Cargar fuente
+    paquitoSrc.src = data.videoUrl;
+    paquitoVideo.load();
+    paquitoVideo.volume = data.volume || 0.8;
+
+    // Mostrar panel
+    videoPanel.style.display   = 'block';
+    videoPanel.style.animation = 'videoIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
+
+    // Esperar a que el vídeo esté listo para reproducir
+    const tryPlay = () => {
+      paquitoVideo.muted = !audioUnlocked; // muted si no hay interacción
+      paquitoVideo.play().then(() => {
+        // Si arrancó en mute y el audio está desbloqueado, activar sonido
+        if (audioUnlocked) paquitoVideo.muted = false;
+      }).catch(e => {
+        console.warn('play() bloqueado, reintentando en mute:', e);
+        paquitoVideo.muted = true;
+        paquitoVideo.play().catch(e2 => console.error('No se pudo reproducir:', e2));
+      });
+    };
+
+    // Si ya tiene datos suficientes, reproducir directamente; si no, esperar
+    if (paquitoVideo.readyState >= 3) {
+      tryPlay();
+    } else {
+      paquitoVideo.addEventListener('canplay', tryPlay, { once: true });
+    }
+
+    const duration = (data.durationSeconds || 15) * 1000;
+    videoTimeout = setTimeout(hideVideo, duration);
+  }
+
+  function hideVideo() {
+    videoPanel.style.animation = 'videoOut 0.4s ease forwards';
+    paquitoVideo.pause();
+    setTimeout(() => {
+      videoPanel.style.display = 'none';
+      paquitoVideo.currentTime = 0;
+    }, 400);
+  }
+
+  paquitoVideo.addEventListener('ended', () => {
+    if (videoTimeout) clearTimeout(videoTimeout);
+    hideVideo();
+  });
+
   // ── WEBSOCKET ─────────────────────────────────────────────────────────────
 
   function connectWebSocket() {
@@ -813,6 +939,7 @@
         if (data.type === 'battle_start')  { onBattleStart(data);  return; }
         if (data.type === 'battle_attack') { onBattleAttack(data); return; }
         if (data.type === 'battle_end')    { onBattleEnd(data);    return; }
+        if (data.type === 'video')         { showVideo(data);      return; }
         enqueue(data);
       } catch(err) {
         console.error('Error parseando mensaje', err);
