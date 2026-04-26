@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoulShinyBot — Panel de Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #080b0f;
+      --surface:   #0d1117;
+      --surface2:  #161b22;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #e6edf3;
+      --muted:     #7d8590;
+      --green:     #3fb950;
+      --yellow:    #d29922;
+      --red:       #f85149;
+      --blue:      #58a6ff;
+      --purple:    #bc8cff;
+      --accent:    #e53935;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── LAYOUT ── */
+    .app { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      position: sticky; top: 0; height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    .logo {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .logo-title { font-size: 16px; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
+    .logo-sub   { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-weight: 600;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(229,57,53,0.08); }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .main { flex: 1; padding: 32px; overflow-y: auto; max-width: 1200px; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── HEADER ── */
+    .page-header { margin-bottom: 28px; }
+    .page-title  { font-size: 24px; font-weight: 800; }
+    .page-sub    { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+    /* ── STATUS GRID ── */
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
+
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 14px;
+      transition: border-color 0.2s;
+    }
+    .status-card:hover { border-color: rgba(255,255,255,0.15); }
+
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .status-dot.ok     { background: var(--green); color: var(--green); }
+    .status-dot.warn   { background: var(--yellow); color: var(--yellow); }
+    .status-dot.error  { background: var(--red); color: var(--red); }
+    .status-dot.pulse  { animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .status-info { flex: 1; min-width: 0; }
+    .status-label { font-size: 12px; color: var(--muted); }
+    .status-value { font-size: 14px; font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── STATS ROW ── */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+    .stat-num  { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+    .stat-lbl  { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* ── COMMANDS TABLE ── */
+    .cmd-list { display: flex; flex-direction: column; gap: 6px; }
+    .cmd-row  {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border-radius: 8px; border: 1px solid var(--border);
+      transition: border-color 0.15s;
+    }
+    .cmd-row:hover { border-color: rgba(255,255,255,0.15); }
+    .cmd-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--blue); }
+
+    .toggle {
+      width: 40px; height: 22px; border-radius: 11px;
+      background: #30363d; border: none; cursor: pointer;
+      position: relative; transition: background 0.2s; flex-shrink: 0;
+    }
+    .toggle::after {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; top: 3px; left: 3px;
+      transition: transform 0.2s;
+    }
+    .toggle.on { background: var(--green); }
+    .toggle.on::after { transform: translateX(18px); }
+
+    /* ── DATABASE TABLE ── */
+    .db-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .db-table th {
+      text-align: left; padding: 8px 12px;
+      font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+    }
+    .db-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .db-table tr:last-child td { border-bottom: none; }
+    .db-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .pts-input {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 4px 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      width: 80px; text-align: right;
+    }
+    .pts-input:focus { outline: none; border-color: var(--blue); }
+
+    .btn-save {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px; padding: 4px 10px;
+      font-size: 11px; cursor: pointer; transition: all 0.15s;
+      font-family: 'Syne', sans-serif;
+    }
+    .btn-save:hover { border-color: var(--green); color: var(--green); }
+
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 20px; font-size: 10px; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-pokemon { background: rgba(255,214,0,0.15); color: #FFD600; }
+    .badge-naruto  { background: rgba(255,107,53,0.15); color: #FF6B35; }
+    .badge-anime   { background: rgba(188,140,255,0.15); color: var(--purple); }
+    .badge-default { background: rgba(88,166,255,0.15); color: var(--blue); }
+
+    /* ── JSON EDITOR ── */
+    .json-editor {
+      width: 100%; min-height: 320px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: #a5d6ff; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      border-radius: 8px; padding: 14px; resize: vertical;
+      line-height: 1.6; outline: none;
+    }
+    .json-editor:focus { border-color: var(--blue); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px; font-size: 13px;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+      font-family: 'Syne', sans-serif;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #c62828; }
+    .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.3); }
+
+    .editor-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* ── LOGS ── */
+    .log-container {
+      background: #010409; border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px;
+      height: 400px; overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      line-height: 1.8;
+    }
+    .log-entry { display: flex; gap: 10px; }
+    .log-time  { color: #30363d; flex-shrink: 0; }
+    .log-logger { color: #58a6ff; flex-shrink: 0; min-width: 120px; }
+    .log-msg   { color: #c9d1d9; word-break: break-all; }
+    .log-INFO  .log-level { color: var(--blue); }
+    .log-WARN  .log-level { color: var(--yellow); }
+    .log-ERROR .log-level { color: var(--red); }
+    .log-DEBUG .log-level { color: var(--muted); }
+    .log-level { flex-shrink: 0; width: 44px; }
+
+    .log-controls { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .log-filter {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 5px 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    }
+    .log-filter:focus { outline: none; border-color: var(--blue); }
+
+    .auto-scroll-label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; margin-left: auto; }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer; color: var(--muted); transition: all 0.15s;
+      font-family: 'Syne', sans-serif;
+    }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .tab.active { background: rgba(229,57,53,0.15); color: var(--accent); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 18px;
+      font-size: 13px; display: none; z-index: 9999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      animation: toastIn 0.2s ease;
+    }
+    @keyframes toastIn { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+    /* ── UPTIME ── */
+    .uptime-bar {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px; font-weight: 700;
+      color: var(--green); letter-spacing: 2px;
+    }
+
+    /* ── SEARCH ── */
+    .search-input {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 8px 12px;
+      font-size: 13px; width: 100%; margin-bottom: 12px;
+      font-family: 'Syne', sans-serif; outline: none;
+    }
+    .search-input:focus { border-color: var(--blue); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+    /* ── DIVIDER ── */
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+    .empty-state { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">🤖 SoulShinyBot</div>
+      <div class="logo-sub">Panel de Control</div>
+    </div>
+    <div class="nav-item active" onclick="showPage('status')">
+      <span class="nav-icon">📊</span> Estado
+    </div>
+    <div class="nav-item" onclick="showPage('commands')">
+      <span class="nav-icon">⚡</span> Comandos
+    </div>
+    <div class="nav-item" onclick="showPage('database')">
+      <span class="nav-icon">🗄️</span> Base de datos
+    </div>
+    <div class="nav-item" onclick="showPage('media')">
+      <span class="nav-icon">🎬</span> Media & Timers
+    </div>
+    <div class="nav-item" onclick="showPage('logs')">
+      <span class="nav-icon">📋</span> Logs
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- ═══ STATUS ═══ -->
+    <div class="page active" id="page-status">
+      <div class="page-header">
+        <div class="page-title">Estado del Bot</div>
+        <div class="page-sub" id="last-refresh">Actualizando...</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num uptime-bar" id="uptime">--</div>
+          <div class="stat-lbl">Tiempo activo</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="cmd-count" style="color:var(--blue)">--</div>
+          <div class="stat-lbl">Comandos activos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="overlay-clients" style="color:var(--purple)">--</div>
+          <div class="stat-lbl">Clientes overlay</div>
+        </div>
+      </div>
+
+      <div class="status-grid" id="services-grid">
+        <!-- Rellenado por JS -->
+      </div>
+    </div>
+
+    <!-- ═══ COMMANDS ═══ -->
+    <div class="page" id="page-commands">
+      <div class="page-header">
+        <div class="page-title">Comandos</div>
+        <div class="page-sub">Habilita o deshabilita comandos en tiempo real</div>
+      </div>
+      <div class="card">
+        <input class="search-input" placeholder="Buscar comando..." oninput="filterCommands(this.value)">
+        <div class="cmd-list" id="cmd-list">
+          <div class="empty-state">Cargando comandos...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DATABASE ═══ -->
+    <div class="page" id="page-database">
+      <div class="page-header">
+        <div class="page-title">Base de Datos</div>
+        <div class="page-sub">Gestiona puntos y colecciones de los viewers</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="showDbTab('users')">👥 Usuarios & Puntos</div>
+        <div class="tab" onclick="showDbTab('collectibles')">🎴 Colecciones</div>
+      </div>
+
+      <!-- Usuarios -->
+      <div id="db-users" class="card">
+        <input class="search-input" placeholder="Buscar usuario..." oninput="filterUsers(this.value)">
+        <table class="db-table" id="users-table">
+          <thead><tr><th>Usuario</th><th>Puntos</th><th>Acción</th></tr></thead>
+          <tbody id="users-body">
+            <tr><td colspan="3" class="empty-state">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Coleccionables -->
+      <div id="db-collectibles" class="card" style="display:none">
+        <input class="search-input" placeholder="Buscar usuario o tipo..." oninput="filterCollectibles(this.value)">
+        <table class="db-table" id="col-table">
+          <thead><tr><th>Usuario</th><th>Tipo</th><th>Item</th></tr></thead>
+          <tbody id="col-body">
+            <tr><td colspan="3" class="empty-state">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ MEDIA & TIMERS ═══ -->
+    <div class="page" id="page-media">
+      <div class="page-header">
+        <div class="page-title">Media & Timers</div>
+        <div class="page-sub">Edita los comandos de media y los timers sin tocar ficheros</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="showMediaTab('media')">🎬 media_commands.json</div>
+        <div class="tab" onclick="showMediaTab('timers')">⏱️ timers.json</div>
+      </div>
+
+      <div id="media-editor-section">
+        <div class="card">
+          <div class="card-title">media_commands.json</div>
+          <textarea class="json-editor" id="media-editor" spellcheck="false"></textarea>
+          <div class="editor-actions">
+            <button class="btn btn-primary" onclick="saveMediaCommands()">💾 Guardar</button>
+            <button class="btn btn-secondary" onclick="loadMediaCommands()">🔄 Recargar</button>
+            <span style="color:var(--muted);font-size:11px;margin-left:auto">Los cambios se aplican al reiniciar el bot</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="timers-editor-section" style="display:none">
+        <div class="card">
+          <div class="card-title">timers.json</div>
+          <textarea class="json-editor" id="timers-editor" spellcheck="false"></textarea>
+          <div class="editor-actions">
+            <button class="btn btn-primary" onclick="saveTimers()">💾 Guardar</button>
+            <button class="btn btn-secondary" onclick="loadTimers()">🔄 Recargar</button>
+            <span style="color:var(--muted);font-size:11px;margin-left:auto">Los cambios se aplican al reiniciar el bot</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LOGS ═══ -->
+    <div class="page" id="page-logs">
+      <div class="page-header">
+        <div class="page-title">Logs en Tiempo Real</div>
+        <div class="page-sub">Últimos 100 eventos del bot</div>
+      </div>
+      <div class="card">
+        <div class="log-controls">
+          <select class="log-filter" id="log-level-filter" onchange="renderLogs()">
+            <option value="ALL">Todos</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+          </select>
+          <input class="log-filter" id="log-search" placeholder="Buscar en logs..." oninput="renderLogs()" style="width:220px">
+          <button class="btn btn-secondary" onclick="loadLogs()" style="padding:5px 12px;font-size:12px">🔄</button>
+          <label class="auto-scroll-label">
+            <input type="checkbox" id="auto-scroll" checked> Auto-scroll
+          </label>
+        </div>
+        <div class="log-container" id="log-container">
+          <div class="empty-state">Cargando logs...</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const API = '';  // mismo origen
+
+  // ── Navegación ─────────────────────────────────────────────────
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.querySelector(`[onclick="showPage('${name}')"]`).classList.add('active');
+
+    if (name === 'status')   loadStatus();
+    if (name === 'commands') loadCommands();
+    if (name === 'database') { loadUsers(); loadCollectibles(); }
+    if (name === 'media')    { loadMediaCommands(); loadTimers(); }
+    if (name === 'logs')     loadLogs();
+  }
+
+  // ── STATUS ─────────────────────────────────────────────────────
+
+  async function loadStatus() {
+    try {
+      const data = await fetch(`${API}/api/status`).then(r => r.json());
+
+      document.getElementById('uptime').textContent        = data.uptime;
+      document.getElementById('cmd-count').textContent     = `${data.enabledCommands}/${data.commandCount}`;
+      document.getElementById('overlay-clients').textContent = data.services.websocket.clients;
+      document.getElementById('last-refresh').textContent  = 'Última actualización: ' + new Date().toLocaleTimeString();
+
+      const grid = document.getElementById('services-grid');
+      grid.innerHTML = Object.entries(data.services).map(([key, svc]) => `
+        <div class="status-card">
+          <div class="status-dot ${svc.status} pulse"></div>
+          <div class="status-info">
+            <div class="status-label">${svc.label}</div>
+            <div class="status-value" style="color:var(--${svc.status === 'ok' ? 'green' : svc.status === 'warn' ? 'yellow' : 'red'})">
+              ${svc.status.toUpperCase()}${svc.clients !== undefined ? ` · ${svc.clients} cliente${svc.clients !== 1 ? 's' : ''}` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch(e) {
+      toast('❌ Error conectando con el bot', 'error');
+    }
+  }
+
+  // Auto-refresh status cada 10s si la página está activa
+  setInterval(() => {
+    if (document.getElementById('page-status').classList.contains('active')) loadStatus();
+  }, 10000);
+
+  // ── COMMANDS ───────────────────────────────────────────────────
+
+  let allCommands = [];
+
+  async function loadCommands() {
+    try {
+      allCommands = await fetch(`${API}/api/commands`).then(r => r.json());
+      renderCommands(allCommands);
+    } catch(e) { toast('Error cargando comandos', 'error'); }
+  }
+
+  function renderCommands(cmds) {
+    const list = document.getElementById('cmd-list');
+    if (!cmds.length) { list.innerHTML = '<div class="empty-state">No hay comandos registrados</div>'; return; }
+    list.innerHTML = cmds.map(cmd => `
+      <div class="cmd-row">
+        <span class="cmd-name">!${cmd.name}</span>
+        <button class="toggle ${cmd.enabled ? 'on' : ''}" onclick="toggleCommand('${cmd.name}', this)" title="${cmd.enabled ? 'Deshabilitar' : 'Habilitar'}"></button>
+      </div>
+    `).join('');
+  }
+
+  function filterCommands(q) {
+    renderCommands(allCommands.filter(c => c.name.includes(q.toLowerCase())));
+  }
+
+  async function toggleCommand(name, btn) {
+    try {
+      const data = await fetch(`${API}/api/commands/${name}/toggle`, { method: 'POST' }).then(r => r.json());
+      btn.classList.toggle('on', data.enabled);
+      const cmd = allCommands.find(c => c.name === name);
+      if (cmd) cmd.enabled = data.enabled;
+      toast(`!${name} ${data.enabled ? '✅ habilitado' : '⛔ deshabilitado'}`);
+    } catch(e) { toast('Error al cambiar el comando', 'error'); }
+  }
+
+  // ── DATABASE ───────────────────────────────────────────────────
+
+  let allUsers = [], allCollectibles = [];
+
+  function showDbTab(tab) {
+    document.querySelectorAll('.tabs .tab').forEach((t,i) => t.classList.toggle('active', i === (tab === 'users' ? 0 : 1)));
+    document.getElementById('db-users').style.display        = tab === 'users'        ? 'block' : 'none';
+    document.getElementById('db-collectibles').style.display = tab === 'collectibles' ? 'block' : 'none';
+  }
+
+  async function loadUsers() {
+    try {
+      allUsers = await fetch(`${API}/api/database/users`).then(r => r.json());
+      renderUsers(allUsers);
+    } catch(e) { toast('Error cargando usuarios', 'error'); }
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('users-body');
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Sin datos</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--blue)">@${u.username}</td>
+        <td><input class="pts-input" type="number" value="${u.points}" id="pts-${u.username}" min="0"></td>
+        <td><button class="btn-save" onclick="savePoints('${u.username}')">Guardar</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function filterUsers(q) {
+    renderUsers(allUsers.filter(u => u.username.includes(q.toLowerCase())));
+  }
+
+  async function savePoints(username) {
+    const pts = parseInt(document.getElementById('pts-' + username).value) || 0;
+    try {
+      await fetch(`${API}/api/database/users/${username}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ points: pts })
+      });
+      const u = allUsers.find(u => u.username === username);
+      if (u) u.points = pts;
+      toast(`✅ @${username}: ${pts} puntos guardados`);
+    } catch(e) { toast('Error guardando puntos', 'error'); }
+  }
+
+  async function loadCollectibles() {
+    try {
+      allCollectibles = await fetch(`${API}/api/database/collectibles`).then(r => r.json());
+      renderCollectibles(allCollectibles);
+    } catch(e) {}
+  }
+
+  function renderCollectibles(items) {
+    const tbody = document.getElementById('col-body');
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Sin colecciones</td></tr>'; return; }
+    tbody.innerHTML = items.map(c => `
+      <tr>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--blue)">@${c.username}</td>
+        <td><span class="badge badge-${c.type}">${c.type}</span></td>
+        <td style="color:var(--muted)">${c.itemName} <span style="color:#30363d;font-size:10px">(${c.itemId})</span></td>
+      </tr>
+    `).join('');
+  }
+
+  function filterCollectibles(q) {
+    renderCollectibles(allCollectibles.filter(c =>
+      c.username.includes(q.toLowerCase()) || c.type.includes(q.toLowerCase())));
+  }
+
+  // ── MEDIA & TIMERS ─────────────────────────────────────────────
+
+  function showMediaTab(tab) {
+    document.querySelectorAll('#page-media .tab').forEach((t,i) => t.classList.toggle('active', i === (tab === 'media' ? 0 : 1)));
+    document.getElementById('media-editor-section').style.display  = tab === 'media'  ? 'block' : 'none';
+    document.getElementById('timers-editor-section').style.display = tab === 'timers' ? 'block' : 'none';
+  }
+
+  async function loadMediaCommands() {
+    try {
+      const data = await fetch(`${API}/api/media-commands`).then(r => r.text());
+      document.getElementById('media-editor').value = JSON.stringify(JSON.parse(data), null, 2);
+    } catch(e) { document.getElementById('media-editor').value = '[]'; }
+  }
+
+  async function saveMediaCommands() {
+    try {
+      JSON.parse(document.getElementById('media-editor').value); // validar JSON
+      await fetch(`${API}/api/media-commands`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: document.getElementById('media-editor').value
+      });
+      toast('✅ media_commands.json guardado. Reinicia el bot para aplicar.');
+    } catch(e) { toast('❌ JSON inválido — revisa la sintaxis', 'error'); }
+  }
+
+  async function loadTimers() {
+    try {
+      const data = await fetch(`${API}/api/timers`).then(r => r.text());
+      document.getElementById('timers-editor').value = JSON.stringify(JSON.parse(data), null, 2);
+    } catch(e) { document.getElementById('timers-editor').value = '[]'; }
+  }
+
+  async function saveTimers() {
+    try {
+      JSON.parse(document.getElementById('timers-editor').value);
+      await fetch(`${API}/api/timers`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: document.getElementById('timers-editor').value
+      });
+      toast('✅ timers.json guardado. Reinicia el bot para aplicar.');
+    } catch(e) { toast('❌ JSON inválido — revisa la sintaxis', 'error'); }
+  }
+
+  // ── LOGS ───────────────────────────────────────────────────────
+
+  let allLogs = [];
+
+  async function loadLogs() {
+    try {
+      allLogs = await fetch(`${API}/api/logs`).then(r => r.json());
+      renderLogs();
+    } catch(e) {}
+  }
+
+  function renderLogs() {
+    const levelFilter  = document.getElementById('log-level-filter').value;
+    const searchFilter = document.getElementById('log-search').value.toLowerCase();
+    const container    = document.getElementById('log-container');
+
+    let filtered = allLogs;
+    if (levelFilter !== 'ALL') filtered = filtered.filter(l => l.level === levelFilter);
+    if (searchFilter) filtered = filtered.filter(l =>
+      l.msg.toLowerCase().includes(searchFilter) || l.logger.toLowerCase().includes(searchFilter));
+
+    if (!filtered.length) { container.innerHTML = '<div class="empty-state">Sin logs</div>'; return; }
+
+    container.innerHTML = filtered.map(l => `
+      <div class="log-entry log-${l.level}">
+        <span class="log-time">${l.time}</span>
+        <span class="log-level">${l.level}</span>
+        <span class="log-logger">${l.logger}</span>
+        <span class="log-msg">${escapeHtml(l.msg)}</span>
+      </div>
+    `).join('');
+
+    if (document.getElementById('auto-scroll').checked) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Auto-refresh logs cada 5s si la página está activa
+  setInterval(() => {
+    if (document.getElementById('page-logs').classList.contains('active')) loadLogs();
+  }, 5000);
+
+  // ── TOAST ──────────────────────────────────────────────────────
+
+  let toastTimer = null;
+  function toast(msg, type = 'ok') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.borderColor = type === 'error' ? 'var(--red)' : 'var(--green)';
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
+
+  // ── INIT ───────────────────────────────────────────────────────
+  loadStatus();
+</script>
+</body>
+</html>

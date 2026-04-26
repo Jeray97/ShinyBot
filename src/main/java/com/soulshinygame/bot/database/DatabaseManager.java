@@ -36,150 +36,141 @@ public class DatabaseManager {
         }
     }
 
-    // ── PUNTOS ───────────────────────────────────────────────────
+    public boolean isHealthy() {
+        try { userPointsDao.queryForAll(); return true; }
+        catch (Exception e) { return false; }
+    }
+
+    // ── PUNTOS ────────────────────────────────────────────────────
 
     public int getPoints(String username) {
-        try {
-            UserPoints user = userPointsDao.queryForId(username);
-            return user != null ? user.getPoints() : 0;
-        } catch (SQLException e) {
-            log.error("Error obteniendo puntos de {}", username, e);
-            return 0;
-        }
+        try { UserPoints u = userPointsDao.queryForId(username); return u != null ? u.getPoints() : 0; }
+        catch (SQLException e) { log.error("Error getPoints {}", username, e); return 0; }
     }
 
     public void addPoints(String username, int amount) {
         try {
-            UserPoints user = userPointsDao.queryForId(username);
-            if (user == null) user = new UserPoints(username, amount);
-            else user.setPoints(user.getPoints() + amount);
-            userPointsDao.createOrUpdate(user);
-        } catch (SQLException e) {
-            log.error("Error añadiendo puntos a {}", username, e);
-        }
+            UserPoints u = userPointsDao.queryForId(username);
+            if (u == null) u = new UserPoints(username, amount);
+            else u.setPoints(u.getPoints() + amount);
+            userPointsDao.createOrUpdate(u);
+        } catch (SQLException e) { log.error("Error addPoints {}", username, e); }
     }
 
     public void removePoints(String username, int amount) {
         try {
-            UserPoints user = userPointsDao.queryForId(username);
-            if (user != null) {
-                user.setPoints(Math.max(0, user.getPoints() - amount));
-                userPointsDao.update(user);
-            }
-        } catch (SQLException e) {
-            log.error("Error quitando puntos a {}", username, e);
-        }
+            UserPoints u = userPointsDao.queryForId(username);
+            if (u != null) { u.setPoints(Math.max(0, u.getPoints() - amount)); userPointsDao.update(u); }
+        } catch (SQLException e) { log.error("Error removePoints {}", username, e); }
+    }
+
+    public void setPoints(String username, int points) {
+        try {
+            UserPoints u = userPointsDao.queryForId(username);
+            if (u == null) u = new UserPoints(username, Math.max(0, points));
+            else u.setPoints(Math.max(0, points));
+            userPointsDao.createOrUpdate(u);
+        } catch (SQLException e) { log.error("Error setPoints {}", username, e); }
     }
 
     public String getTopUsers(int limit) {
         try {
-            List<UserPoints> top = userPointsDao.queryBuilder()
-                    .orderBy("points", false).limit((long) limit).query();
-            return top.stream()
-                    .map(u -> u.getUsername() + "(" + u.getPoints() + "⭐)")
-                    .collect(Collectors.joining(", "));
-        } catch (SQLException e) {
-            log.error("Error obteniendo top usuarios", e);
-            return "Error al obtener el ranking";
-        }
+            List<UserPoints> top = userPointsDao.queryBuilder().orderBy("points", false).limit((long) limit).query();
+            return top.stream().map(u -> u.getUsername() + "(" + u.getPoints() + "⭐)").collect(Collectors.joining(", "));
+        } catch (SQLException e) { log.error("Error getTopUsers", e); return "Error"; }
     }
 
-    // ── COLECCIONABLES ───────────────────────────────────────────
-
-    /**
-     * Registra un coleccionable para un usuario.
-     * Devuelve true si es nuevo, false si ya lo tenía.
-     */
-    public boolean registerCollectible(String username, String collectionType,
-                                       String itemId, String itemName) {
+    public String getAllUsersJson() {
         try {
-            // Comprobar si ya lo tiene
+            List<UserPoints> all = userPointsDao.queryBuilder().orderBy("points", false).query();
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < all.size(); i++) {
+                UserPoints u = all.get(i);
+                sb.append(String.format("{\"username\":\"%s\",\"points\":%d}", u.getUsername(), u.getPoints()));
+                if (i < all.size() - 1) sb.append(",");
+            }
+            return sb.append("]").toString();
+        } catch (SQLException e) { log.error("Error getAllUsersJson", e); return "[]"; }
+    }
+
+    // ── COLECCIONABLES ────────────────────────────────────────────
+
+    public boolean registerCollectible(String username, String collectionType, String itemId, String itemName) {
+        try {
             QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
-            qb.where()
-                    .eq("username", username)
-                    .and().eq("collectionType", collectionType)
-                    .and().eq("itemId", itemId);
-
-            if (qb.countOf() > 0) return false; // ya lo tenía
-
+            qb.where().eq("username", username).and().eq("collectionType", collectionType).and().eq("itemId", itemId);
+            if (qb.countOf() > 0) return false;
             collectibleDao.create(new UserCollectible(username, collectionType, itemId, itemName));
             return true;
-        } catch (SQLException e) {
-            log.error("Error registrando coleccionable", e);
-            return false;
-        }
+        } catch (SQLException e) { log.error("Error registerCollectible", e); return false; }
     }
 
-    /** Cuántos ítems de una colección tiene un usuario */
     public long getCollectionCount(String username, String collectionType) {
         try {
             QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
             qb.where().eq("username", username).and().eq("collectionType", collectionType);
             return qb.countOf();
-        } catch (SQLException e) {
-            log.error("Error contando colección", e);
-            return 0;
-        }
+        } catch (SQLException e) { log.error("Error getCollectionCount", e); return 0; }
     }
 
-    /** Lista de nombres coleccionados por un usuario en una categoría */
     public List<String> getCollection(String username, String collectionType) {
         try {
             QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
             qb.where().eq("username", username).and().eq("collectionType", collectionType);
-            return qb.query().stream()
-                    .map(UserCollectible::getItemName)
-                    .collect(Collectors.toList());
-        } catch (SQLException e) {
-            log.error("Error obteniendo colección", e);
-            return List.of();
-        }
+            return qb.query().stream().map(UserCollectible::getItemName).collect(Collectors.toList());
+        } catch (SQLException e) { log.error("Error getCollection", e); return List.of(); }
     }
 
-    /** Lista completa de coleccionables (con itemId) de un usuario en una categoría, ordenada por itemId */
+    /**
+     * Devuelve todos los coleccionables de un usuario en un tipo concreto.
+     * Usado por ColeccionCommand y BattleSystem.
+     */
     public List<UserCollectible> getCollectibles(String username, String collectionType) {
         try {
             QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
             qb.where().eq("username", username).and().eq("collectionType", collectionType);
-            qb.orderBy("itemId", true);
             return qb.query();
-        } catch (SQLException e) {
-            log.error("Error obteniendo coleccionables de {}", username, e);
-            return List.of();
-        }
+        } catch (SQLException e) { log.error("Error getCollectibles {}/{}", username, collectionType, e); return List.of(); }
     }
 
-    /** Todos los coleccionables de un usuario que NO sean de una categoría concreta (ej. todo excepto "pokemon") */
+    /**
+     * Devuelve todos los coleccionables de un usuario EXCEPTO los del tipo indicado.
+     * Usado por ColeccionCommand para listar todos los anime (no pokemon).
+     */
     public List<UserCollectible> getCollectiblesExcluding(String username, String excludedType) {
         try {
             QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
             qb.where().eq("username", username).and().ne("collectionType", excludedType);
-            qb.orderBy("collectionType", true);
             return qb.query();
-        } catch (SQLException e) {
-            log.error("Error obteniendo coleccionables de {}", username, e);
-            return List.of();
-        }
+        } catch (SQLException e) { log.error("Error getCollectiblesExcluding {}/{}", username, excludedType, e); return List.of(); }
     }
 
-    /** Top usuarios por tamaño de colección */
     public String getCollectionTop(String collectionType, int limit) {
         try {
-            // Agrupar por username y contar
             QueryBuilder<UserCollectible, Integer> qb = collectibleDao.queryBuilder();
             qb.where().eq("collectionType", collectionType);
-            List<UserCollectible> all = qb.query();
-
-            return all.stream()
+            return qb.query().stream()
                     .collect(Collectors.groupingBy(UserCollectible::getUsername, Collectors.counting()))
                     .entrySet().stream()
                     .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
                     .limit(limit)
                     .map(e -> e.getKey() + "(" + e.getValue() + ")")
                     .collect(Collectors.joining(", "));
-        } catch (SQLException e) {
-            log.error("Error obteniendo top colección", e);
-            return "Error";
-        }
+        } catch (SQLException e) { log.error("Error getCollectionTop", e); return "Error"; }
+    }
+
+    public String getAllCollectiblesJson() {
+        try {
+            List<UserCollectible> all = collectibleDao.queryBuilder().orderBy("username", true).query();
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < all.size(); i++) {
+                UserCollectible c = all.get(i);
+                sb.append(String.format(
+                        "{\"username\":\"%s\",\"type\":\"%s\",\"itemId\":\"%s\",\"itemName\":\"%s\"}",
+                        c.getUsername(), c.getCollectionType(), c.getItemId(), c.getItemName()));
+                if (i < all.size() - 1) sb.append(",");
+            }
+            return sb.append("]").toString();
+        } catch (SQLException e) { log.error("Error getAllCollectiblesJson", e); return "[]"; }
     }
 }

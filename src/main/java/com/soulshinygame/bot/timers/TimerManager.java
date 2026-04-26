@@ -15,24 +15,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Lee timers.json y programa mensajes automáticos en el chat.
- *
- * Formato de timers.json:
- * [
- *   {
- *     "name": "redes_sociales",
- *     "intervalMinutes": 20,
- *     "messages": [
- *       "¡Sígueme en Twitter! → https://twitter.com/...",
- *       "¡Únete al Discord! → https://discord.gg/..."
- *     ]
- *   }
- * ]
- *
- * Si hay varios mensajes en el array, los va rotando en cada disparo.
- * El fichero se lee al arrancar el bot — para aplicar cambios basta con reiniciarlo.
- */
 public class TimerManager {
 
     private static final Logger log = LoggerFactory.getLogger(TimerManager.class);
@@ -41,6 +23,7 @@ public class TimerManager {
     private final TwitchClient client;
     private final String channel;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+    private boolean running = false;
 
     public TimerManager(TwitchClient client, String channel) {
         this.client  = client;
@@ -54,25 +37,28 @@ public class TimerManager {
             return;
         }
         try {
-            String json    = Files.readString(path);
+            String json = Files.readString(path);
             List<TimerEntry> timers = parse(json);
-
-            for (TimerEntry timer : timers) {
-                scheduleTimer(timer);
-            }
-
+            for (TimerEntry timer : timers) { scheduleTimer(timer); }
+            running = true;
             log.info("TimerManager: {} timer(s) activos", timers.size());
         } catch (IOException e) {
             log.error("Error leyendo {}", FILENAME, e);
         }
     }
 
+    /** Para el panel de admin */
+    public boolean isRunning() { return running && !scheduler.isShutdown(); }
+
+    public void stop() {
+        scheduler.shutdownNow();
+        running = false;
+        log.info("TimerManager detenido");
+    }
+
     private void scheduleTimer(TimerEntry timer) {
         if (timer.messages.isEmpty()) return;
-
-        // Índice rotativo para ir alternando mensajes
         int[] index = {0};
-
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 String message = timer.messages.get(index[0] % timer.messages.size());
@@ -84,62 +70,39 @@ public class TimerManager {
             }
         }, timer.intervalMinutes, timer.intervalMinutes, TimeUnit.MINUTES);
 
-        log.info("Timer '{}' programado cada {} minutos ({} mensaje(s))",
+        log.info("Timer '{}' programado cada {} min ({} mensaje(s))",
                 timer.name, timer.intervalMinutes, timer.messages.size());
-    }
-
-    public void stop() {
-        scheduler.shutdownNow();
-        log.info("TimerManager detenido");
     }
 
     // ── Parser ────────────────────────────────────────────────────
 
     private List<TimerEntry> parse(String json) {
         List<TimerEntry> result = new ArrayList<>();
-
         for (String block : extractTopLevelBlocks(json)) {
             try {
                 String name       = field(block, "name");
                 int interval      = intField(block, "intervalMinutes", 30);
                 List<String> msgs = extractMessages(block);
-
-                if (msgs.isEmpty()) {
-                    log.warn("Timer '{}' sin mensajes, ignorado", name);
-                    continue;
-                }
-
+                if (msgs.isEmpty()) { log.warn("Timer '{}' sin mensajes, ignorado", name); continue; }
                 result.add(new TimerEntry(name, interval, msgs));
-            } catch (Exception e) {
-                log.warn("Error parseando timer: {}", e.getMessage());
-            }
+            } catch (Exception e) { log.warn("Error parseando timer: {}", e.getMessage()); }
         }
         return result;
     }
 
-    /** Extrae el array "messages" de un bloque JSON de timer */
     private List<String> extractMessages(String block) {
         List<String> messages = new ArrayList<>();
         try {
-            // Encontrar el array messages: [ "...", "..." ]
             int start = block.indexOf("\"messages\"");
             if (start == -1) return messages;
-
             int arrayStart = block.indexOf('[', start);
             int arrayEnd   = block.indexOf(']', arrayStart);
             if (arrayStart == -1 || arrayEnd == -1) return messages;
-
             String arrayContent = block.substring(arrayStart + 1, arrayEnd);
-
-            // Extraer cada string entre comillas del array
             Pattern p = Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\"");
             Matcher m = p.matcher(arrayContent);
-            while (m.find()) {
-                messages.add(m.group(1));
-            }
-        } catch (Exception e) {
-            log.warn("Error extrayendo mensajes del timer");
-        }
+            while (m.find()) { messages.add(m.group(1)); }
+        } catch (Exception e) { log.warn("Error extrayendo mensajes del timer"); }
         return messages;
     }
 
@@ -148,37 +111,27 @@ public class TimerManager {
         int depth = 0, start = -1;
         for (int i = 0; i < json.length(); i++) {
             char c = json.charAt(i);
-            if (c == '"') {
-                i++;
-                while (i < json.length() && json.charAt(i) != '"') {
-                    if (json.charAt(i) == '\\') i++;
-                    i++;
-                }
-                continue;
-            }
+            if (c == '"') { i++; while (i < json.length() && json.charAt(i) != '"') { if (json.charAt(i) == '\\') i++; i++; } continue; }
             if (c == '{') { if (depth == 0) start = i; depth++; }
-            else if (c == '}') {
-                depth--;
-                if (depth == 0 && start != -1) { blocks.add(json.substring(start, i + 1)); start = -1; }
-            }
+            else if (c == '}') { depth--; if (depth == 0 && start != -1) { blocks.add(json.substring(start, i + 1)); start = -1; } }
         }
         return blocks;
     }
 
     private String field(String json, String key) {
         try {
-            Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+            Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\")");
             Matcher m = p.matcher(json);
             return m.find() ? m.group(1) : "";
         } catch (Exception e) { return ""; }
     }
 
-    private int intField(String json, String key, int defaultValue) {
+    private int intField(String json, String key, int def) {
         try {
             Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)");
             Matcher m = p.matcher(json);
-            return m.find() ? Integer.parseInt(m.group(1)) : defaultValue;
-        } catch (Exception e) { return defaultValue; }
+            return m.find() ? Integer.parseInt(m.group(1)) : def;
+        } catch (Exception e) { return def; }
     }
 
     private record TimerEntry(String name, int intervalMinutes, List<String> messages) {}
