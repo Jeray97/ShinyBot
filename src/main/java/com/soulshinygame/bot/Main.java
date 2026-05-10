@@ -16,6 +16,7 @@ import com.soulshinygame.bot.overlay.AnimeCommand;
 import com.soulshinygame.bot.overlay.OverlayHttpServer;
 import com.soulshinygame.bot.overlay.PokedexCommand;
 import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
+import com.soulshinygame.bot.rewards.MemeRewardHandler;
 import com.soulshinygame.bot.timers.TimerManager;
 import com.soulshinygame.bot.util.DailyLimitManager;
 import com.soulshinygame.bot.util.FollowerCache;
@@ -36,8 +37,6 @@ public class Main {
         log.info("Arrancando el bot...");
 
         Dotenv env = Dotenv.load();
-
-        // Log handler (antes de todo para capturar desde el inicio)
         AdminLogHandler logHandler = new AdminLogHandler();
 
         // Base de datos
@@ -47,17 +46,17 @@ public class Main {
         // Servidores overlay
         OverlayHttpServer httpServer = new OverlayHttpServer(OVERLAY_HTTP_PORT);
         httpServer.start();
-
         WebSocketOverlayServer overlayServer = new WebSocketOverlayServer(OVERLAY_WS_PORT);
         overlayServer.start();
 
-        // Cliente Twitch
+        // Cliente Twitch (con PubSub habilitado para escuchar recompensas)
         TwitchClient client = TwitchClientBuilder.builder()
                 .withClientId(env.get("CLIENT_ID"))
                 .withClientSecret(env.get("CLIENT_SECRET"))
                 .withEnableChat(true)
                 .withChatAccount(new OAuth2Credential("twitch", env.get("BOT_ACCESS_TOKEN")))
                 .withEnableHelix(true)
+                .withEnablePubSub(true)   // ← necesario para escuchar redenciones de recompensas
                 .build();
 
         String channel = env.get("CHANNEL_NAME");
@@ -91,11 +90,19 @@ public class Main {
 
         registry.start();
 
-        // Timers
+        // ═══════════════════════════════════════════════════════════════
+        // RECOMPENSAS DEL CANAL (Twitch Channel Points)
+        // ═══════════════════════════════════════════════════════════════
+
+        new MemeRewardHandler(client, overlayServer, broadcasterId, env.get("BOT_ACCESS_TOKEN")).start();
+
+        // ═══════════════════════════════════════════════════════════════
+        // TIMERS
+        // ═══════════════════════════════════════════════════════════════
+
         TimerManager timerManager = new TimerManager(client, channel);
         timerManager.start();
 
-        // Moderación
         new ModerationHandler(channel, client, broadcasterId).register();
 
         // ═══════════════════════════════════════════════════════════════
@@ -107,8 +114,6 @@ public class Main {
                 registry, db, overlayServer, timerManager, logHandler, adminPassword);
         AdminServer adminServer = new AdminServer(ADMIN_PORT, apiHandler);
         adminServer.start();
-
-        // ══════════════════════════════════════════════════════════════
 
         log.info("==============================================");
         log.info("Bot listo en #{}", channel);

@@ -1,0 +1,8 @@
+{
+  "rewardName": "meme",
+  "videos": [
+    { "name": "Meme 1", "streamableId": "wlc460" },
+    { "name": "Meme 2", "streamableId": "ID_DE_TU_VIDEO_2" },
+    { "name": "Meme 3", "streamableId": "ID_DE_TU_VIDEO_3" }
+  ]
+}

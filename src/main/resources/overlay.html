@@ -475,7 +475,7 @@
 <!-- ── VIDEO (!paquito) ── -->
 <div id="video-panel">
   <div class="video-header">
-    <span class="video-title">🐾 Paquito</span>
+    <span class="video-title" id="video-title-text">🐾 Paquito</span>
     <span class="video-triggered" id="video-triggered"></span>
   </div>
   <video id="paquito-video" playsinline>
@@ -876,6 +876,9 @@
 
   function showVideo(data) {
     if (videoTimeout) clearTimeout(videoTimeout);
+
+    // Título dinámico (Paquito, Meme, etc.)
+    document.getElementById('video-title-text').textContent = data.title || '🐾 Paquito';
 
     document.getElementById('video-triggered').textContent = 'invocado por @' + data.triggeredBy;
 
