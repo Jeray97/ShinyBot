@@ -23,7 +23,7 @@ public class PaquitoCommand implements Command {
     private static final Logger log = LoggerFactory.getLogger(PaquitoCommand.class);
 
     // Usuarios con acceso además de mods y broadcaster
-    private static final Set<String> WHITELIST = Set.of("elsyum");
+    private static final Set<String> WHITELIST = Set.of("elsyum", "paquito_pipo");
 
     // ID del video en Streamable (parte final de la URL)
     private static final String STREAMABLE_ID = "wlc460";
