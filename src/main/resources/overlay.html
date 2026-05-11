@@ -531,6 +531,7 @@
     if (data.type === 'pokedex') showPokemon(data);
     if (data.type === 'anime')   showAnime(data);
     if (data.type === 'media')   showMedia(data);
+    if (data.type === 'video')   showVideo(data);
   }
 
   function onEventFinished() { setTimeout(processQueue, 500); }
@@ -879,7 +880,6 @@
 
     // Título dinámico (Paquito, Meme, etc.)
     document.getElementById('video-title-text').textContent = data.title || '🐾 Paquito';
-
     document.getElementById('video-triggered').textContent = 'invocado por @' + data.triggeredBy;
 
     // Cargar fuente
@@ -893,9 +893,8 @@
 
     // Esperar a que el vídeo esté listo para reproducir
     const tryPlay = () => {
-      paquitoVideo.muted = !audioUnlocked; // muted si no hay interacción
+      paquitoVideo.muted = !audioUnlocked;
       paquitoVideo.play().then(() => {
-        // Si arrancó en mute y el audio está desbloqueado, activar sonido
         if (audioUnlocked) paquitoVideo.muted = false;
       }).catch(e => {
         console.warn('play() bloqueado, reintentando en mute:', e);
@@ -904,28 +903,26 @@
       });
     };
 
-    // Si ya tiene datos suficientes, reproducir directamente; si no, esperar
-    if (paquitoVideo.readyState >= 3) {
-      tryPlay();
-    } else {
-      paquitoVideo.addEventListener('canplay', tryPlay, { once: true });
-    }
+    if (paquitoVideo.readyState >= 3) tryPlay();
+    else paquitoVideo.addEventListener('canplay', tryPlay, { once: true });
 
-    const duration = (data.durationSeconds || 15) * 1000;
-    videoTimeout = setTimeout(hideVideo, duration);
+    // Failsafe: cierre máximo 30s aunque el vídeo no emita 'ended'
+    const maxDuration = (data.durationSeconds || 30) * 1000;
+    videoTimeout = setTimeout(hideVideo, maxDuration);
   }
 
   function hideVideo() {
+    if (videoTimeout) { clearTimeout(videoTimeout); videoTimeout = null; }
     videoPanel.style.animation = 'videoOut 0.4s ease forwards';
     paquitoVideo.pause();
     setTimeout(() => {
       videoPanel.style.display = 'none';
       paquitoVideo.currentTime = 0;
+      onEventFinished();  // ← libera la cola
     }, 400);
   }
 
   paquitoVideo.addEventListener('ended', () => {
-    if (videoTimeout) clearTimeout(videoTimeout);
     hideVideo();
   });
 
@@ -942,7 +939,7 @@
         if (data.type === 'battle_start')  { onBattleStart(data);  return; }
         if (data.type === 'battle_attack') { onBattleAttack(data); return; }
         if (data.type === 'battle_end')    { onBattleEnd(data);    return; }
-        if (data.type === 'video')         { showVideo(data);      return; }
+        // video, pokedex, anime, media → todos van por la cola
         enqueue(data);
       } catch(err) {
         console.error('Error parseando mensaje', err);
