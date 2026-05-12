@@ -893,9 +893,16 @@
 
     // Esperar a que el vídeo esté listo para reproducir
     const tryPlay = () => {
-      paquitoVideo.muted = !audioUnlocked;
+      // Si el evento viene marcado como muted (ej: recompensa "meme" sin sonido)
+      // fuerza muted=true y NO necesita audio unlock
+      if (data.muted === true) {
+        paquitoVideo.muted = true;
+      } else {
+        paquitoVideo.muted = !audioUnlocked;
+      }
+
       paquitoVideo.play().then(() => {
-        if (audioUnlocked) paquitoVideo.muted = false;
+        if (audioUnlocked && data.muted !== true) paquitoVideo.muted = false;
       }).catch(e => {
         console.warn('play() bloqueado, reintentando en mute:', e);
         paquitoVideo.muted = true;
