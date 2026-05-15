@@ -25,16 +25,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Maneja varias "Recompensas de espectador" de Twitch.
+ * Maneja recompensas de espectador de Twitch identificándolas por ID.
  *
- * Cada recompensa en meme_videos.json tiene:
- *   - name: nombre exacto de la recompensa en Twitch
- *   - icon: emoji que sale en el panel del overlay
- *   - muted: true para reproducir sin sonido
- *   - durationSeconds: cuánto dura visible
- *   - videos: lista de IDs de Streamable
- *
- * Al canjear, elige uno aleatorio de la lista y lo manda al overlay.
+ * Para encontrar el ID de tus recompensas:
+ *   - Al arrancar el bot, mira el log: lista TODAS las recompensas del canal con sus IDs
+ *   - O canjea una recompensa cualquiera y el bot loguea su ID
  */
 public class MemeRewardHandler {
 
@@ -49,7 +44,7 @@ public class MemeRewardHandler {
     private final Random random = new Random();
 
     private final List<RewardConfig> rewards = new ArrayList<>();
-    private final Map<String, String> resolvedUrls = new HashMap<>(); // streamableId → mp4 url
+    private final Map<String, String> resolvedUrls = new HashMap<>();
 
     public MemeRewardHandler(TwitchClient client, WebSocketOverlayServer overlayServer,
                              String broadcasterId, String accessToken) {
@@ -61,14 +56,16 @@ public class MemeRewardHandler {
 
     public void start() {
         loadConfig();
+
+        // Listar todas las recompensas del canal para que el usuario pueda copiar IDs
+        listChannelRewards();
+
         if (rewards.isEmpty()) {
-            log.warn("MemeRewardHandler: sin recompensas configuradas, no se activa");
+            log.warn("MemeRewardHandler: sin recompensas configuradas (rewardId vacío)");
             return;
         }
 
         resolveAllUrls();
-
-        // Re-resolver cada 6h (URLs firmadas de Streamable expiran)
         Executors.newSingleThreadScheduledExecutor()
                 .scheduleAtFixedRate(this::resolveAllUrls, 6, 6, TimeUnit.HOURS);
 
@@ -77,28 +74,88 @@ public class MemeRewardHandler {
             client.getPubSub().listenForChannelPointsRedemptionEvents(cred, broadcasterId);
             client.getEventManager().onEvent(RewardRedeemedEvent.class, this::onRewardRedeemed);
 
-            String names = rewards.stream().map(r -> "'" + r.name + "'")
-                    .reduce((a, b) -> a + ", " + b).orElse("");
-            log.info("MemeRewardHandler escuchando recompensas: {}", names);
+            log.info("MemeRewardHandler escuchando {} recompensa(s) por ID", rewards.size());
 
         } catch (Exception e) {
             log.error("Error suscribiendo a PubSub", e);
         }
     }
 
+    /**
+     * Lista todas las recompensas del canal con sus IDs.
+     * Se llama al arrancar el bot para que puedas copiar los IDs al meme_videos.json
+     */
+    private void listChannelRewards() {
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id=" + broadcasterId))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Client-Id", System.getenv().getOrDefault("CLIENT_ID", ""))
+                    .GET().build();
+
+            // Si CLIENT_ID no está en env, intentar leerlo del .env
+            String clientId = io.github.cdimascio.dotenv.Dotenv.load().get("CLIENT_ID", "");
+            req = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id=" + broadcasterId))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Client-Id", clientId)
+                    .GET().build();
+
+            HttpResponse<String> res = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+
+            if (res.statusCode() != 200) {
+                log.warn("No se pudieron listar recompensas (status {}): {}", res.statusCode(), res.body());
+                return;
+            }
+
+            // Parsear cada recompensa del JSON: id, title, cost
+            Pattern p = Pattern.compile(
+                    "\"id\"\\s*:\\s*\"([^\"]+)\"[^}]*\"title\"\\s*:\\s*\"([^\"]+)\"[^}]*\"cost\"\\s*:\\s*(\\d+)");
+            Matcher m = p.matcher(res.body());
+
+            log.info("");
+            log.info("╔══════════════════════════════════════════════════════════════════╗");
+            log.info("║          RECOMPENSAS DEL CANAL — COPIA EL ID QUE NECESITES        ║");
+            log.info("╚══════════════════════════════════════════════════════════════════╝");
+            int count = 0;
+            while (m.find()) {
+                log.info("  📌 '{}' ({} pts)", m.group(2), m.group(3));
+                log.info("     ID: {}", m.group(1));
+                count++;
+            }
+            log.info("══════════════════════════════════════════════════════════════════");
+            log.info("Total: {} recompensa(s) encontradas", count);
+            if (count == 0) {
+                log.info("Si no aparece ninguna, asegúrate de que:");
+                log.info("  1. El token tiene scope 'channel:read:redemptions'");
+                log.info("  2. Las recompensas están creadas en el dashboard de Twitch");
+            }
+            log.info("");
+
+        } catch (Exception e) {
+            log.warn("Error listando recompensas: {}", e.getMessage());
+        }
+    }
+
     private void onRewardRedeemed(RewardRedeemedEvent event) {
         try {
-            String title = event.getRedemption().getReward().getTitle();
-            String user  = event.getRedemption().getUser().getDisplayName();
+            String rewardId = event.getRedemption().getReward().getId();
+            String title    = event.getRedemption().getReward().getTitle();
+            String user     = event.getRedemption().getUser().getDisplayName();
 
-            // Buscar la recompensa por nombre (insensitivo a mayúsculas)
+            // SIEMPRE loguear el ID — útil si el usuario no sabe cuál es el ID de una recompensa
+            log.info("🎁 Recompensa canjeada por {}: '{}' (ID: {})", user, title, rewardId);
+
+            // Buscar la recompensa por ID
             RewardConfig match = null;
             for (RewardConfig r : rewards) {
-                if (r.name.equalsIgnoreCase(title)) { match = r; break; }
+                if (r.rewardId.equals(rewardId)) { match = r; break; }
             }
-            if (match == null) return;
+            if (match == null) {
+                log.debug("Esta recompensa no está configurada en meme_videos.json");
+                return;
+            }
 
-            log.info("Recompensa '{}' canjeada por {}", title, user);
             playRandomVideo(match, user);
 
         } catch (Exception e) {
@@ -107,7 +164,6 @@ public class MemeRewardHandler {
     }
 
     private void playRandomVideo(RewardConfig reward, String username) {
-        // Filtrar videos con URL resuelta
         List<MemeVideo> available = new ArrayList<>();
         for (MemeVideo v : reward.videos) {
             if (resolvedUrls.containsKey(v.streamableId)) available.add(v);
@@ -119,9 +175,7 @@ public class MemeRewardHandler {
 
         MemeVideo chosen = available.get(random.nextInt(available.size()));
         String videoUrl  = resolvedUrls.get(chosen.streamableId);
-
-        // volume = 0 si está muted, 0.8 si tiene sonido
-        double volume = reward.muted ? 0 : 0.8;
+        double volume    = reward.muted ? 0 : 0.8;
 
         overlayServer.sendEvent(String.format("""
             {
@@ -144,36 +198,22 @@ public class MemeRewardHandler {
 
     private void loadConfig() {
         Path path = Path.of(FILENAME);
-        if (!Files.exists(path)) {
-            log.warn("{} no encontrado.", FILENAME);
-            return;
-        }
+        if (!Files.exists(path)) { log.warn("{} no encontrado.", FILENAME); return; }
         try {
             String json = Files.readString(path);
-
-            // Aislar el array "rewards"
             int rewardsStart = json.indexOf("\"rewards\"");
-            if (rewardsStart == -1) {
-                // Compatibilidad con la estructura antigua (sin "rewards")
-                log.warn("Estructura antigua detectada — cargando como recompensa única 'meme'");
-                loadLegacyFormat(json);
-                return;
-            }
+            if (rewardsStart == -1) return;
 
             int arrayStart = json.indexOf('[', rewardsStart);
             int arrayEnd   = findMatching(json, arrayStart);
             if (arrayStart == -1 || arrayEnd == -1) return;
 
             String arrayContent = json.substring(arrayStart, arrayEnd + 1);
-
-            // Extraer cada objeto del array de recompensas
             for (String block : extractTopLevelBlocks(arrayContent)) {
                 RewardConfig r = parseReward(block);
                 if (r != null) rewards.add(r);
             }
-
-            log.info("MemeRewardHandler: {} recompensa(s) cargada(s)", rewards.size());
-
+            log.info("Cargadas {} recompensa(s) del fichero {}", rewards.size(), FILENAME);
         } catch (IOException e) {
             log.error("Error leyendo {}", FILENAME, e);
         }
@@ -181,44 +221,32 @@ public class MemeRewardHandler {
 
     private RewardConfig parseReward(String block) {
         try {
-            String name = field(block, "name");
-            if (name.isEmpty()) return null;
+            String rewardId = field(block, "rewardId");
+            if (rewardId.isEmpty() || rewardId.startsWith("PEGA_AQUI")) {
+                log.warn("Recompensa sin rewardId válido, ignorada");
+                return null;
+            }
+            String name       = field(block, "name");
             String icon       = field(block, "icon");
             boolean muted     = boolField(block, "muted", true);
             int duration      = intField(block, "durationSeconds", 15);
             if (icon.isEmpty()) icon = muted ? "🎭" : "🔊";
 
-            // Extraer videos del array
             List<MemeVideo> videos = new ArrayList<>();
             Pattern p = Pattern.compile(
                     "\\{\\s*\"name\"\\s*:\\s*\"([^\"]+)\"\\s*,\\s*\"streamableId\"\\s*:\\s*\"([^\"]+)\"\\s*\\}");
             Matcher m = p.matcher(block);
             while (m.find()) videos.add(new MemeVideo(m.group(1), m.group(2)));
 
-            if (videos.isEmpty()) {
-                log.warn("Recompensa '{}' sin videos, ignorada", name);
-                return null;
-            }
-            return new RewardConfig(name, icon, muted, duration, videos);
+            if (videos.isEmpty()) { log.warn("Recompensa '{}' sin videos", name); return null; }
+            return new RewardConfig(rewardId, name, icon, muted, duration, videos);
         } catch (Exception e) {
             log.warn("Error parseando recompensa: {}", e.getMessage());
             return null;
         }
     }
 
-    /** Compatibilidad con el formato antiguo de meme_videos.json */
-    private void loadLegacyFormat(String json) {
-        String rewardName = field(json, "rewardName");
-        if (rewardName.isEmpty()) rewardName = "meme";
-        List<MemeVideo> videos = new ArrayList<>();
-        Pattern p = Pattern.compile(
-                "\\{\\s*\"name\"\\s*:\\s*\"([^\"]+)\"\\s*,\\s*\"streamableId\"\\s*:\\s*\"([^\"]+)\"\\s*\\}");
-        Matcher m = p.matcher(json);
-        while (m.find()) videos.add(new MemeVideo(m.group(1), m.group(2)));
-        if (!videos.isEmpty()) rewards.add(new RewardConfig(rewardName, "🎭", true, 15, videos));
-    }
-
-    // ── Resolución de URLs de Streamable ──────────────────────────
+    // ── Streamable ────────────────────────────────────────────────
 
     private void resolveAllUrls() {
         new Thread(() -> {
@@ -254,14 +282,7 @@ public class MemeRewardHandler {
         int depth = 0, start = -1;
         for (int i = 0; i < json.length(); i++) {
             char c = json.charAt(i);
-            if (c == '"') {
-                i++;
-                while (i < json.length() && json.charAt(i) != '"') {
-                    if (json.charAt(i) == '\\') i++;
-                    i++;
-                }
-                continue;
-            }
+            if (c == '"') { i++; while (i < json.length() && json.charAt(i) != '"') { if (json.charAt(i) == '\\') i++; i++; } continue; }
             if (c == '{') { if (depth == 0) start = i; depth++; }
             else if (c == '}') { depth--; if (depth == 0 && start != -1) { blocks.add(json.substring(start, i + 1)); start = -1; } }
         }
@@ -280,27 +301,18 @@ public class MemeRewardHandler {
     }
 
     private String field(String json, String key) {
-        try {
-            Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
-            Matcher m = p.matcher(json);
-            return m.find() ? m.group(1) : "";
-        } catch (Exception e) { return ""; }
+        try { Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\""); Matcher m = p.matcher(json); return m.find() ? m.group(1) : ""; }
+        catch (Exception e) { return ""; }
     }
 
     private int intField(String json, String key, int def) {
-        try {
-            Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)");
-            Matcher m = p.matcher(json);
-            return m.find() ? Integer.parseInt(m.group(1)) : def;
-        } catch (Exception e) { return def; }
+        try { Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)"); Matcher m = p.matcher(json); return m.find() ? Integer.parseInt(m.group(1)) : def; }
+        catch (Exception e) { return def; }
     }
 
     private boolean boolField(String json, String key, boolean def) {
-        try {
-            Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(true|false)");
-            Matcher m = p.matcher(json);
-            return m.find() ? Boolean.parseBoolean(m.group(1)) : def;
-        } catch (Exception e) { return def; }
+        try { Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*(true|false)"); Matcher m = p.matcher(json); return m.find() ? Boolean.parseBoolean(m.group(1)) : def; }
+        catch (Exception e) { return def; }
     }
 
     private String escape(String s) {
@@ -308,5 +320,5 @@ public class MemeRewardHandler {
     }
 
     private record MemeVideo(String name, String streamableId) {}
-    private record RewardConfig(String name, String icon, boolean muted, int durationSeconds, List<MemeVideo> videos) {}
+    private record RewardConfig(String rewardId, String name, String icon, boolean muted, int durationSeconds, List<MemeVideo> videos) {}
 }

@@ -1,23 +1,25 @@
 {
   "rewards": [
     {
-      "name": "meme",
+      "rewardId": "PEGA_AQUI_EL_ID_DE_LA_RECOMPENSA_1",
+      "name": "Meme sin sonido (solo informativo)",
       "icon": "🎭",
       "muted": true,
       "durationSeconds": 15,
       "videos": [
-        { "name": "Meme sin sonido 1", "streamableId": "ID_DE_TU_VIDEO_1" },
-        { "name": "Meme sin sonido 2", "streamableId": "ID_DE_TU_VIDEO_2" }
+        { "name": "Video 1", "streamableId": "ID_DE_TU_VIDEO_1" },
+        { "name": "Video 2", "streamableId": "ID_DE_TU_VIDEO_2" }
       ]
     },
     {
-      "name": "meme2",
+      "rewardId": "PEGA_AQUI_EL_ID_DE_LA_RECOMPENSA_2",
+      "name": "Meme con sonido (solo informativo)",
       "icon": "🔊",
       "muted": false,
       "durationSeconds": 20,
       "videos": [
-        { "name": "Meme con audio 1", "streamableId": "ID_DE_TU_VIDEO_3" },
-        { "name": "Meme con audio 2", "streamableId": "ID_DE_TU_VIDEO_4" }
+        { "name": "Video 1", "streamableId": "ID_DE_TU_VIDEO_3" },
+        { "name": "Video 2", "streamableId": "ID_DE_TU_VIDEO_4" }
       ]
     }
   ]
