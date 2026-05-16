@@ -109,30 +109,177 @@ public class MemeRewardHandler {
                 return;
             }
 
-            Pattern p = Pattern.compile(
-                    "\"id\"\\s*:\\s*\"([^\"]+)\"[^}]*\"title\"\\s*:\\s*\"([^\"]+)\"[^}]*\"cost\"\\s*:\\s*(\\d+)");
-            Matcher m = p.matcher(res.body());
+            String body = res.body();
+
+            // Aislar el array "data": [...]
+            int dataStart = body.indexOf("\"data\"");
+            if (dataStart == -1) {
+                log.warn("Respuesta sin campo 'data'. Body completo: {}", body);
+                return;
+            }
+            int arrayStart = body.indexOf('[', dataStart);
+            int arrayEnd   = findMatchingBracket(body, arrayStart);
+            if (arrayStart == -1 || arrayEnd == -1) {
+                log.warn("No se pudo aislar el array de data. Body: {}", body);
+                return;
+            }
+
+            // Extraer cada objeto-recompensa del array (objetos top-level)
+            String arrayContent = body.substring(arrayStart + 1, arrayEnd);
+            List<String> rewardBlocks = extractTopLevelObjects(arrayContent);
 
             log.info("");
             log.info("╔══════════════════════════════════════════════════════════════════╗");
             log.info("║          RECOMPENSAS DEL CANAL — COPIA EL ID QUE NECESITES        ║");
             log.info("╚══════════════════════════════════════════════════════════════════╝");
+
             int count = 0;
-            while (m.find()) {
-                log.info("  📌 '{}' ({} pts)", m.group(2), m.group(3));
-                log.info("     ID: {}", m.group(1));
+            for (String block : rewardBlocks) {
+                // Solo nos interesan los campos del nivel superior del objeto-recompensa
+                String id    = topLevelString(block, "id");
+                String title = topLevelString(block, "title");
+                String cost  = topLevelNumber(block, "cost");
+
+                if (id.isEmpty()) continue;
+
+                log.info("  📌 '{}' ({} pts)", title.isEmpty() ? "(sin título)" : title,
+                        cost.isEmpty() ? "?" : cost);
+                log.info("     ID: {}", id);
                 count++;
             }
             log.info("══════════════════════════════════════════════════════════════════");
             log.info("Total: {} recompensa(s) encontradas", count);
             if (count == 0) {
-                log.info("Si no aparecen, comprueba que el token tiene scope channel:read:redemptions");
+                log.info("");
+                log.info("Si no aparece ninguna, comprueba:");
+                log.info("  1. Las recompensas están creadas y activas en el dashboard de Twitch");
+                log.info("  2. El token tiene scope 'channel:read:redemptions'");
+                log.info("  3. El token es del broadcaster (no de la cuenta del bot)");
+                log.info("");
+                log.info("Para debug, respuesta cruda de Twitch (primeros 800 chars):");
+                log.info(body.length() > 800 ? body.substring(0, 800) + "..." : body);
             }
             log.info("");
 
         } catch (Exception e) {
             log.warn("Error listando recompensas: {}", e.getMessage());
         }
+    }
+
+    // ── Helpers para parsear JSON sin librerías ──────────────────
+
+    /**
+     * Devuelve los objetos { ... } de primer nivel dentro de un array.
+     * Maneja objetos anidados y strings con caracteres especiales.
+     */
+    private List<String> extractTopLevelObjects(String json) {
+        List<String> blocks = new ArrayList<>();
+        int depth = 0, start = -1;
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '"') {  // saltar strings
+                i++;
+                while (i < json.length() && json.charAt(i) != '"') {
+                    if (json.charAt(i) == '\\') i++;
+                    i++;
+                }
+                continue;
+            }
+            if (c == '{') { if (depth == 0) start = i; depth++; }
+            else if (c == '}') {
+                depth--;
+                if (depth == 0 && start != -1) {
+                    blocks.add(json.substring(start, i + 1));
+                    start = -1;
+                }
+            }
+        }
+        return blocks;
+    }
+
+    /**
+     * Extrae un campo de tipo string del nivel superior de un objeto JSON
+     * (ignora campos con el mismo nombre dentro de objetos anidados).
+     */
+    private String topLevelString(String objectJson, String key) {
+        return scanField(objectJson, key, true);
+    }
+
+    /** Extrae un campo numérico del nivel superior */
+    private String topLevelNumber(String objectJson, String key) {
+        return scanField(objectJson, key, false);
+    }
+
+    private String scanField(String json, String key, boolean isString) {
+        String search = "\"" + key + "\"";
+        int depth = 0;  // 0 = nivel raíz del objeto
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '"') {
+                // Si estamos en nivel raíz y encontramos la key, leemos el valor
+                if (depth == 1 && json.startsWith(search, i)) {
+                    int colon = json.indexOf(':', i + search.length());
+                    if (colon == -1) return "";
+                    int valStart = colon + 1;
+                    while (valStart < json.length() && Character.isWhitespace(json.charAt(valStart))) valStart++;
+                    if (valStart >= json.length()) return "";
+
+                    if (isString) {
+                        if (json.charAt(valStart) != '"') return "";
+                        int valEnd = valStart + 1;
+                        StringBuilder sb = new StringBuilder();
+                        while (valEnd < json.length() && json.charAt(valEnd) != '"') {
+                            if (json.charAt(valEnd) == '\\' && valEnd + 1 < json.length()) {
+                                sb.append(json.charAt(valEnd + 1));
+                                valEnd += 2;
+                            } else {
+                                sb.append(json.charAt(valEnd));
+                                valEnd++;
+                            }
+                        }
+                        return sb.toString();
+                    } else {
+                        // Número
+                        StringBuilder sb = new StringBuilder();
+                        while (valStart < json.length()
+                                && (Character.isDigit(json.charAt(valStart)) || json.charAt(valStart) == '-')) {
+                            sb.append(json.charAt(valStart));
+                            valStart++;
+                        }
+                        return sb.toString();
+                    }
+                }
+                // Saltar string (no es nuestra key)
+                i++;
+                while (i < json.length() && json.charAt(i) != '"') {
+                    if (json.charAt(i) == '\\') i++;
+                    i++;
+                }
+                continue;
+            }
+            if (c == '{') depth++;
+            else if (c == '}') depth--;
+        }
+        return "";
+    }
+
+    private int findMatchingBracket(String json, int startBracket) {
+        int depth = 0;
+        for (int i = startBracket; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '"') {
+                i++;
+                while (i < json.length() && json.charAt(i) != '"') {
+                    if (json.charAt(i) == '\\') i++;
+                    i++;
+                }
+                continue;
+            }
+            if (c == '[') depth++;
+            else if (c == ']') { depth--; if (depth == 0) return i; }
+        }
+        return -1;
     }
 
     private void onRewardRedeemed(CustomRewardRedemptionAddEvent event) {
