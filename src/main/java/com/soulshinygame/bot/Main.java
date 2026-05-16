@@ -20,6 +20,7 @@ import com.soulshinygame.bot.rewards.MemeRewardHandler;
 import com.soulshinygame.bot.timers.TimerManager;
 import com.soulshinygame.bot.util.DailyLimitManager;
 import com.soulshinygame.bot.util.FollowerCache;
+import com.soulshinygame.bot.util.TokenValidator;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,7 @@ public class Main {
         log.info("Arrancando el bot...");
 
         Dotenv env = Dotenv.load();
+        TokenValidator.validate(env.get("BOT_ACCESS_TOKEN"));
         AdminLogHandler logHandler = new AdminLogHandler();
 
         DatabaseManager db = new DatabaseManager();
