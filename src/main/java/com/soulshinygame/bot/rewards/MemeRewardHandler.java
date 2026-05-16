@@ -2,7 +2,8 @@ package com.soulshinygame.bot.rewards;
 
 import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
 import com.github.twitch4j.TwitchClient;
-import com.github.twitch4j.pubsub.events.RewardRedeemedEvent;
+import com.github.twitch4j.eventsub.events.CustomRewardRedemptionAddEvent;
+import com.github.twitch4j.eventsub.subscriptions.SubscriptionTypes;
 import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +26,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Maneja recompensas de espectador de Twitch identificándolas por ID.
+ * Maneja recompensas de espectador via EventSub (PubSub fue cerrado el 14/04/2025).
  *
- * Para encontrar el ID de tus recompensas:
- *   - Al arrancar el bot, mira el log: lista TODAS las recompensas del canal con sus IDs
- *   - O canjea una recompensa cualquiera y el bot loguea su ID
+ * REQUISITOS:
+ *   - Twitch4J 1.24+ con EventSocket habilitado en TwitchClientBuilder
+ *   - BOT_ACCESS_TOKEN del broadcaster con scope channel:read:redemptions
  */
 public class MemeRewardHandler {
 
@@ -40,6 +41,7 @@ public class MemeRewardHandler {
     private final WebSocketOverlayServer overlayServer;
     private final String broadcasterId;
     private final String accessToken;
+    private final String clientId;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Random random = new Random();
 
@@ -47,17 +49,16 @@ public class MemeRewardHandler {
     private final Map<String, String> resolvedUrls = new HashMap<>();
 
     public MemeRewardHandler(TwitchClient client, WebSocketOverlayServer overlayServer,
-                             String broadcasterId, String accessToken) {
+                             String broadcasterId, String accessToken, String clientId) {
         this.client        = client;
         this.overlayServer = overlayServer;
         this.broadcasterId = broadcasterId;
         this.accessToken   = accessToken.replace("oauth:", "");
+        this.clientId      = clientId;
     }
 
     public void start() {
         loadConfig();
-
-        // Listar todas las recompensas del canal para que el usuario pueda copiar IDs
         listChannelRewards();
 
         if (rewards.isEmpty()) {
@@ -71,31 +72,31 @@ public class MemeRewardHandler {
 
         try {
             OAuth2Credential cred = new OAuth2Credential("twitch", accessToken);
-            client.getPubSub().listenForChannelPointsRedemptionEvents(cred, broadcasterId);
-            client.getEventManager().onEvent(RewardRedeemedEvent.class, this::onRewardRedeemed);
 
-            log.info("MemeRewardHandler escuchando {} recompensa(s) por ID", rewards.size());
+            // Crear suscripción EventSub para redenciones de recompensas custom
+            var subscription = SubscriptionTypes.CHANNEL_POINTS_CUSTOM_REWARD_REDEMPTION_ADD
+                    .prepareSubscription(
+                            builder -> builder.broadcasterUserId(broadcasterId).build(),
+                            null  // transport: el EventSocket rellenará session_id automáticamente
+                    );
+
+            client.getEventSocket().register(cred, subscription);
+
+            client.getEventManager().onEvent(CustomRewardRedemptionAddEvent.class, this::onRewardRedeemed);
+
+            log.info("MemeRewardHandler (EventSub) escuchando {} recompensa(s)", rewards.size());
 
         } catch (Exception e) {
-            log.error("Error suscribiendo a PubSub", e);
+            log.error("Error suscribiendo a EventSub", e);
         }
     }
 
     /**
      * Lista todas las recompensas del canal con sus IDs.
-     * Se llama al arrancar el bot para que puedas copiar los IDs al meme_videos.json
      */
     private void listChannelRewards() {
         try {
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id=" + broadcasterId))
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("Client-Id", System.getenv().getOrDefault("CLIENT_ID", ""))
-                    .GET().build();
-
-            // Si CLIENT_ID no está en env, intentar leerlo del .env
-            String clientId = io.github.cdimascio.dotenv.Dotenv.load().get("CLIENT_ID", "");
-            req = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id=" + broadcasterId))
                     .header("Authorization", "Bearer " + accessToken)
                     .header("Client-Id", clientId)
@@ -108,7 +109,6 @@ public class MemeRewardHandler {
                 return;
             }
 
-            // Parsear cada recompensa del JSON: id, title, cost
             Pattern p = Pattern.compile(
                     "\"id\"\\s*:\\s*\"([^\"]+)\"[^}]*\"title\"\\s*:\\s*\"([^\"]+)\"[^}]*\"cost\"\\s*:\\s*(\\d+)");
             Matcher m = p.matcher(res.body());
@@ -126,9 +126,7 @@ public class MemeRewardHandler {
             log.info("══════════════════════════════════════════════════════════════════");
             log.info("Total: {} recompensa(s) encontradas", count);
             if (count == 0) {
-                log.info("Si no aparece ninguna, asegúrate de que:");
-                log.info("  1. El token tiene scope 'channel:read:redemptions'");
-                log.info("  2. Las recompensas están creadas en el dashboard de Twitch");
+                log.info("Si no aparecen, comprueba que el token tiene scope channel:read:redemptions");
             }
             log.info("");
 
@@ -137,24 +135,19 @@ public class MemeRewardHandler {
         }
     }
 
-    private void onRewardRedeemed(RewardRedeemedEvent event) {
+    private void onRewardRedeemed(CustomRewardRedemptionAddEvent event) {
         try {
-            String rewardId = event.getRedemption().getReward().getId();
-            String title    = event.getRedemption().getReward().getTitle();
-            String user     = event.getRedemption().getUser().getDisplayName();
+            String rewardId = event.getReward().getId();
+            String title    = event.getReward().getTitle();
+            String user     = event.getUserName();
 
-            // SIEMPRE loguear el ID — útil si el usuario no sabe cuál es el ID de una recompensa
             log.info("🎁 Recompensa canjeada por {}: '{}' (ID: {})", user, title, rewardId);
 
-            // Buscar la recompensa por ID
             RewardConfig match = null;
             for (RewardConfig r : rewards) {
                 if (r.rewardId.equals(rewardId)) { match = r; break; }
             }
-            if (match == null) {
-                log.debug("Esta recompensa no está configurada en meme_videos.json");
-                return;
-            }
+            if (match == null) return;
 
             playRandomVideo(match, user);
 
@@ -226,10 +219,10 @@ public class MemeRewardHandler {
                 log.warn("Recompensa sin rewardId válido, ignorada");
                 return null;
             }
-            String name       = field(block, "name");
-            String icon       = field(block, "icon");
-            boolean muted     = boolField(block, "muted", true);
-            int duration      = intField(block, "durationSeconds", 15);
+            String name   = field(block, "name");
+            String icon   = field(block, "icon");
+            boolean muted = boolField(block, "muted", true);
+            int duration  = intField(block, "durationSeconds", 15);
             if (icon.isEmpty()) icon = muted ? "🎭" : "🔊";
 
             List<MemeVideo> videos = new ArrayList<>();

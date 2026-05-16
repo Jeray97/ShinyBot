@@ -39,24 +39,25 @@ public class Main {
         Dotenv env = Dotenv.load();
         AdminLogHandler logHandler = new AdminLogHandler();
 
-        // Base de datos
         DatabaseManager db = new DatabaseManager();
         db.init();
 
-        // Servidores overlay
         OverlayHttpServer httpServer = new OverlayHttpServer(OVERLAY_HTTP_PORT);
         httpServer.start();
         WebSocketOverlayServer overlayServer = new WebSocketOverlayServer(OVERLAY_WS_PORT);
         overlayServer.start();
 
-        // Cliente Twitch (con PubSub habilitado para escuchar recompensas)
+        String botToken = env.get("BOT_ACCESS_TOKEN");
+        String clientId = env.get("CLIENT_ID");
+
+        // Cliente Twitch — usar EventSocket en vez de PubSub (cerrado en abril 2025)
         TwitchClient client = TwitchClientBuilder.builder()
-                .withClientId(env.get("CLIENT_ID"))
+                .withClientId(clientId)
                 .withClientSecret(env.get("CLIENT_SECRET"))
                 .withEnableChat(true)
-                .withChatAccount(new OAuth2Credential("twitch", env.get("BOT_ACCESS_TOKEN")))
+                .withChatAccount(new OAuth2Credential("twitch", botToken))
                 .withEnableHelix(true)
-                .withEnablePubSub(true)   // ← necesario para escuchar redenciones de recompensas
+                .withEnableEventSocket(true)   // ← EventSub WebSocket (sustituye a PubSub)
                 .build();
 
         String channel = env.get("CHANNEL_NAME");
@@ -66,7 +67,6 @@ public class Main {
                 .getUsers(null, null, List.of(channel))
                 .execute().getUsers().get(0).getId();
 
-        // Utilidades compartidas
         FollowerCache followerCache = new FollowerCache(client, broadcasterId);
         DailyLimitManager dailyLimit = new DailyLimitManager();
 
@@ -91,10 +91,10 @@ public class Main {
         registry.start();
 
         // ═══════════════════════════════════════════════════════════════
-        // RECOMPENSAS DEL CANAL (Twitch Channel Points)
+        // RECOMPENSAS DEL CANAL (via EventSub)
         // ═══════════════════════════════════════════════════════════════
 
-        new MemeRewardHandler(client, overlayServer, broadcasterId, env.get("BOT_ACCESS_TOKEN")).start();
+        new MemeRewardHandler(client, overlayServer, broadcasterId, botToken, clientId).start();
 
         // ═══════════════════════════════════════════════════════════════
         // TIMERS
