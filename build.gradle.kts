@@ -24,6 +24,7 @@ repositories {
 
 dependencies {
     implementation("com.github.twitch4j:twitch4j:1.19.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     implementation("org.xerial:sqlite-jdbc:3.45.1.0")
     implementation("com.j256.ormlite:ormlite-jdbc:6.1")
     implementation("io.github.cdimascio:dotenv-java:3.0.0")

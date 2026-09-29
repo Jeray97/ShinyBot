@@ -17,6 +17,7 @@ import com.soulshinygame.bot.overlay.OverlayHttpServer;
 import com.soulshinygame.bot.overlay.PokedexCommand;
 import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
 import com.soulshinygame.bot.rewards.MemeRewardHandler;
+import com.soulshinygame.bot.rewards.RewardAdminService;
 import com.soulshinygame.bot.timers.TimerManager;
 import com.soulshinygame.bot.util.DailyLimitManager;
 import com.soulshinygame.bot.util.FollowerCache;
@@ -96,7 +97,8 @@ public class Main {
         // RECOMPENSAS DEL CANAL (via EventSub)
         // ═══════════════════════════════════════════════════════════════
 
-        new MemeRewardHandler(client, overlayServer, broadcasterId, botToken, clientId).start();
+        MemeRewardHandler memeRewards = new MemeRewardHandler(client, overlayServer, broadcasterId, botToken, clientId);
+        memeRewards.start();
 
         // ═══════════════════════════════════════════════════════════════
         // TIMERS
@@ -113,7 +115,8 @@ public class Main {
 
         String adminPassword = env.get("ADMIN_PASSWORD", "");
         AdminApiHandler apiHandler = new AdminApiHandler(
-                registry, db, overlayServer, timerManager, logHandler, adminPassword);
+                registry, db, overlayServer, timerManager, logHandler,
+                new RewardAdminService(memeRewards), adminPassword);
         AdminServer adminServer = new AdminServer(ADMIN_PORT, apiHandler);
         adminServer.start();
 

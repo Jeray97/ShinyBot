@@ -31,7 +31,8 @@ public class TokenValidator {
             new ScopeInfo("chat:edit",                     "Enviar mensajes al chat",          true),
             new ScopeInfo("moderator:manage:banned_users", "Timeouts y bans",                  false),
             new ScopeInfo("moderator:read:followers",      "Comprobar seguidores",             true),
-            new ScopeInfo("channel:read:redemptions",      "Recompensas (!meme via puntos)",   true)
+            new ScopeInfo("channel:read:redemptions",      "Recompensas (!meme via puntos)",   true),
+            new ScopeInfo("channel:manage:redemptions",    "Crear/editar rewards desde el panel", false)
     );
 
     public static void validate(String accessToken) {

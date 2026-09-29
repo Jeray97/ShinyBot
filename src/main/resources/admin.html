@@ -275,6 +275,40 @@
     .section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
     .empty-state { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; }
+
+    /* ── REWARDS ── */
+    .rw-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+    .rw-toolbar .spacer { flex: 1; }
+    .rw-notice { border-left: 3px solid var(--yellow); background: rgba(210,153,34,0.08); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; margin-bottom: 14px; }
+    .rw-notice.error { border-left-color: var(--red); background: rgba(248,81,73,0.08); }
+    .rw-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+    .rw-icon { font-size: 22px; width: 34px; text-align: center; flex-shrink: 0; }
+    .rw-info { flex: 1; min-width: 0; }
+    .rw-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rw-meta { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+    .rw-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .badge-ok   { background: rgba(63,185,80,0.15);  color: var(--green); }
+    .badge-warn { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .badge-bad  { background: rgba(248,81,73,0.15);  color: var(--red); }
+    .badge-mute { background: rgba(125,133,144,0.15); color: var(--muted); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); }
+    .rw-form-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; }
+    .rw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 14px; }
+    .rw-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .rw-field input[type=text], .rw-field input[type=number], .rw-field textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 8px 12px; font-size: 13px;
+      font-family: 'Syne', sans-serif; outline: none;
+    }
+    .rw-field input[type=color] { width: 100%; height: 36px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; cursor: pointer; }
+    .rw-field textarea { font-family: 'JetBrains Mono', monospace; font-size: 12px; min-height: 120px; resize: vertical; line-height: 1.6; }
+    .rw-field input:focus, .rw-field textarea:focus { border-color: var(--blue); }
+    .rw-field .hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .rw-checks { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 16px; }
+    .rw-checks label { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
+    .rw-checks label.disabled { opacity: 0.5; cursor: not-allowed; }
+    .rw-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 14px; word-break: break-all; }
+    .rw-sub { font-size: 13px; font-weight: 700; margin: 22px 0 10px; }
   </style>
 </head>
 <body>
@@ -292,6 +326,9 @@
     </div>
     <div class="nav-item" onclick="showPage('commands')">
       <span class="nav-icon">⚡</span> Comandos
+    </div>
+    <div class="nav-item" onclick="showPage('rewards')">
+      <span class="nav-icon">🎁</span> Rewards
     </div>
     <div class="nav-item" onclick="showPage('database')">
       <span class="nav-icon">🗄️</span> Base de datos
@@ -420,6 +457,72 @@
       </div>
     </div>
 
+    <!-- ═══ REWARDS ═══ -->
+    <div class="page" id="page-rewards">
+      <div class="page-header">
+        <div class="page-title">Rewards</div>
+        <div class="page-sub">Crea y edita las recompensas de puntos del canal sin salir del panel</div>
+      </div>
+
+      <div id="rw-notice"></div>
+
+      <div id="rw-editor" class="card" style="display:none">
+        <div class="rw-form-title" id="rw-form-title">Nueva reward</div>
+        <div class="rw-id" id="rw-id-line"></div>
+
+        <div class="rw-grid">
+          <div class="rw-field"><label for="rw-name">Nombre (máx. 45)</label><input type="text" id="rw-name" maxlength="45"></div>
+          <div class="rw-field"><label for="rw-cost">Coste en puntos</label><input type="number" id="rw-cost" min="1" value="500"></div>
+          <div class="rw-field"><label for="rw-icon">Icono en pantalla (emoji)</label><input type="text" id="rw-icon" maxlength="4" placeholder="🎭"></div>
+          <div class="rw-field"><label for="rw-color">Color en Twitch</label><input type="color" id="rw-color" value="#9146ff"></div>
+        </div>
+
+        <div class="rw-grid">
+          <div class="rw-field" style="grid-column: 1 / -1"><label for="rw-prompt">Descripción (máx. 200)</label><input type="text" id="rw-prompt" maxlength="200"></div>
+        </div>
+
+        <div class="rw-grid">
+          <div class="rw-field"><label for="rw-cooldown">Cooldown global (s)</label><input type="number" id="rw-cooldown" min="0" value="0"><div class="hint">0 = sin cooldown</div></div>
+          <div class="rw-field"><label for="rw-maxstream">Máx. por directo</label><input type="number" id="rw-maxstream" min="0" value="0"><div class="hint">0 = sin límite</div></div>
+          <div class="rw-field"><label for="rw-maxuser">Máx. por usuario y directo</label><input type="number" id="rw-maxuser" min="0" value="0"><div class="hint">0 = sin límite</div></div>
+          <div class="rw-field"><label for="rw-duration">Duración en pantalla (s)</label><input type="number" id="rw-duration" min="1" value="15"></div>
+        </div>
+
+        <div class="rw-checks">
+          <label><input type="checkbox" id="rw-enabled" checked> Activa en Twitch</label>
+          <label><input type="checkbox" id="rw-skipqueue" checked> Completar automáticamente (sin cola)</label>
+          <label><input type="checkbox" id="rw-muted" checked> Vídeos sin sonido</label>
+        </div>
+
+        <div class="rw-field" style="margin-bottom:14px">
+          <label for="rw-videos">Vídeos de Streamable (uno por línea)</label>
+          <textarea id="rw-videos" spellcheck="false" placeholder="https://streamable.com/abc123&#10;Mi meme | https://streamable.com/xyz789"></textarea>
+          <div class="hint">Vale el enlace completo o solo el ID. Si quieres ponerle nombre: <b>Nombre | enlace</b>. Se elige uno al azar en cada canje.</div>
+        </div>
+
+        <div class="rw-checks">
+          <label id="rw-push-label"><input type="checkbox" id="rw-push" checked> <span id="rw-push-text">Crear en Twitch al guardar</span></label>
+        </div>
+        <div class="rw-id" id="rw-push-hint" style="display:none"></div>
+
+        <div class="editor-actions">
+          <button class="btn btn-primary" onclick="saveReward()">💾 Guardar</button>
+          <button class="btn btn-secondary" onclick="closeRewardEditor()">Cancelar</button>
+        </div>
+      </div>
+
+      <div id="rw-list-section">
+        <div class="rw-toolbar">
+          <button class="btn btn-primary" onclick="openRewardEditor(-1)">➕ Nueva reward</button>
+          <button class="btn btn-secondary" onclick="loadRewards()">🔄 Recargar</button>
+          <span class="spacer"></span>
+          <span style="color:var(--muted);font-size:11px">Los cambios se aplican al instante, sin reiniciar</span>
+        </div>
+        <div id="rw-list"><div class="empty-state">Cargando rewards...</div></div>
+        <div id="rw-unlinked"></div>
+      </div>
+    </div>
+
     <!-- ═══ LOGS ═══ -->
     <div class="page" id="page-logs">
       <div class="page-header">
@@ -464,6 +567,7 @@
 
     if (name === 'status')   loadStatus();
     if (name === 'commands') loadCommands();
+    if (name === 'rewards')  loadRewards();
     if (name === 'database') { loadUsers(); loadCollectibles(); }
     if (name === 'media')    { loadMediaCommands(); loadTimers(); }
     if (name === 'logs')     loadLogs();
@@ -653,6 +757,207 @@
       });
       toast('✅ timers.json guardado. Reinicia el bot para aplicar.');
     } catch(e) { toast('❌ JSON inválido — revisa la sintaxis', 'error'); }
+  }
+
+  // ── REWARDS ────────────────────────────────────────────────────
+
+  let rwData = { rewards: [], states: [], twitch: { ok: false, rewards: [] } };
+  let rwEditing = null;   // -1 = nueva, n = índice en edición
+
+  async function rwFetch(path, method = 'GET', body) {
+    const res = await fetch(API + path, {
+      method,
+      headers: body ? {'Content-Type': 'application/json'} : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    let data = {};
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok || data.ok === false) throw new Error(data.error || ('Error ' + res.status));
+    return data;
+  }
+
+  async function loadRewards() {
+    try {
+      rwData = await rwFetch('/api/rewards');
+      renderRewards();
+    } catch(e) {
+      document.getElementById('rw-list').innerHTML = `<div class="empty-state">No se pudieron cargar las rewards: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderRewards() {
+    const notice = document.getElementById('rw-notice');
+    notice.innerHTML = rwData.twitch.ok ? '' :
+      `<div class="rw-notice error">No se pudo consultar Twitch: ${escapeHtml(rwData.twitch.error || 'sin detalles')}. Puedes editar los vídeos, pero no crear ni comprobar rewards.</div>`;
+
+    const list = document.getElementById('rw-list');
+    if (!rwData.rewards.length) {
+      list.innerHTML = '<div class="empty-state">Todavía no hay rewards. Pulsa «Nueva reward» para crear la primera.</div>';
+    } else {
+      list.innerHTML = rwData.rewards.map((r, i) => {
+        const st = rwData.states[i] || { state: 'unknown' };
+        const badge = {
+          synced:  ['badge-ok',   'En Twitch'],
+          pending: ['badge-warn', 'Sin crear en Twitch'],
+          missing: ['badge-bad',  'No existe en Twitch'],
+          unknown: ['badge-mute', 'Sin comprobar']
+        }[st.state];
+        const n = (r.videos || []).length;
+        const meta = [
+          r.cost ? `${r.cost} pts` : null,
+          r.muted === false ? 'con sonido' : 'sin sonido',
+          `${r.durationSeconds || 15}s`,
+          `${n} vídeo${n === 1 ? '' : 's'}`
+        ].filter(Boolean).join('  ·  ');
+        return `
+          <div class="rw-row">
+            <div class="rw-icon">${escapeHtml(r.icon || (r.muted === false ? '🔊' : '🎭'))}</div>
+            <div class="rw-info">
+              <div class="rw-name">${escapeHtml(r.name || '(sin nombre)')}</div>
+              <div class="rw-meta">${escapeHtml(meta)}</div>
+            </div>
+            <span class="badge ${badge[0]}">${badge[1]}</span>
+            <div class="rw-actions">
+              <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px" onclick="openRewardEditor(${i})">✏️ Editar</button>
+              <button class="btn btn-secondary btn-danger" style="padding:5px 12px;font-size:12px" onclick="deleteReward(${i})">🗑️</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // Rewards que existen en Twitch pero el bot todavía no conoce
+    const known = new Set(rwData.rewards.map(r => r.rewardId).filter(Boolean));
+    const unlinked = (rwData.twitch.rewards || []).filter(t => !known.has(t.id));
+    document.getElementById('rw-unlinked').innerHTML = unlinked.length ? `
+      <div class="rw-sub">En tu canal pero sin vídeos en el bot</div>
+      ${unlinked.map(t => `
+        <div class="rw-row">
+          <div class="rw-icon">🎁</div>
+          <div class="rw-info">
+            <div class="rw-name">${escapeHtml(t.title)}</div>
+            <div class="rw-meta">${t.cost} pts</div>
+          </div>
+          <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px" onclick="linkTwitchReward('${escapeHtml(t.id)}')">➕ Añadir vídeos</button>
+        </div>`).join('')}` : '';
+  }
+
+  // ── Editor ──
+
+  function videosToText(videos) {
+    return (videos || []).map(v => `${v.name} | ${v.streamableId}`).join('\n');
+  }
+
+  function textToVideos(text) {
+    return text.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+      const cut = line.indexOf('|');
+      return cut === -1
+        ? { name: '', streamableId: line }
+        : { name: line.slice(0, cut).trim(), streamableId: line.slice(cut + 1).trim() };
+    });
+  }
+
+  function openRewardEditor(index, prefill) {
+    rwEditing = index;
+    const r = prefill || (index >= 0 ? rwData.rewards[index] : {});
+    const st = index >= 0 ? (rwData.states[index] || {}) : {};
+    const $ = id => document.getElementById(id);
+
+    $('rw-form-title').textContent = index >= 0 ? `Editar «${r.name || 'reward'}»` : (prefill ? 'Añadir vídeos a una reward existente' : 'Nueva reward');
+    $('rw-name').value      = r.name || '';
+    $('rw-cost').value      = r.cost || (index < 0 && !prefill ? 500 : 1);
+    $('rw-icon').value      = r.icon || '';
+    $('rw-color').value     = /^#[0-9a-fA-F]{6}$/.test(r.backgroundColor || '') ? r.backgroundColor : '#9146ff';
+    $('rw-prompt').value    = r.prompt || '';
+    $('rw-cooldown').value  = r.cooldownSeconds || 0;
+    $('rw-maxstream').value = r.maxPerStream || 0;
+    $('rw-maxuser').value   = r.maxPerUserPerStream || 0;
+    $('rw-duration').value  = r.durationSeconds || 15;
+    $('rw-enabled').checked   = r.enabled !== false;
+    $('rw-skipqueue').checked = r.skipQueue !== false;
+    $('rw-muted').checked     = r.muted !== false;
+    $('rw-videos').value    = videosToText(r.videos);
+
+    // Si el ID guardado ya no existe en Twitch, la tratamos como nueva y se vuelve a crear.
+    const stale = st.state === 'missing';
+    const hasId = !!(r.rewardId && !r.rewardId.startsWith('PEGA_AQUI')) && !stale;
+    $('rw-id-line').textContent = hasId ? `ID en Twitch: ${r.rewardId}`
+      : (stale ? 'Esta reward ya no existe en Twitch: se volverá a crear al guardar.'
+               : 'Todavía no existe en Twitch: se creará al guardar.');
+
+    // ¿Se puede sincronizar con Twitch? Solo las creadas por el bot o las nuevas.
+    const push = $('rw-push'), pushLabel = $('rw-push-label'), hint = $('rw-push-hint');
+    const canPush = !hasId || st.manageable === true || (prefill && prefill._manageable === true);
+    pushLabel.classList.toggle('disabled', !canPush);
+    push.disabled = !canPush;
+    $('rw-push-text').textContent = hasId ? 'Actualizar también en Twitch al guardar' : 'Crear en Twitch al guardar';
+    push.checked = canPush && (!hasId ? true : st.state !== 'unknown');
+    hint.style.display = canPush ? 'none' : 'block';
+    hint.textContent = canPush ? '' :
+      'Esta reward la creaste a mano en el dashboard de Twitch, así que Twitch solo deja cambiar nombre, coste y límites desde allí. Aquí puedes editar los vídeos y cómo se muestran.';
+
+    $('rw-editor').dataset.rewardId = hasId ? r.rewardId : '';
+    $('rw-editor').style.display = 'block';
+    $('rw-name').focus();
+    $('rw-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function linkTwitchReward(id) {
+    const t = (rwData.twitch.rewards || []).find(x => x.id === id);
+    if (!t) return;
+    openRewardEditor(-1, { rewardId: t.id, name: t.title, cost: t.cost, enabled: t.enabled, _manageable: t.manageable });
+  }
+
+  function closeRewardEditor() {
+    document.getElementById('rw-editor').style.display = 'none';
+    rwEditing = null;
+  }
+
+  async function saveReward() {
+    if (rwEditing === null) return;
+    const $ = id => document.getElementById(id);
+    const existing = rwEditing >= 0 ? rwData.rewards[rwEditing] : {};
+    const reward = {
+      ...existing,                                   // conserva campos extra del JSON
+      rewardId: $('rw-editor').dataset.rewardId || '',
+      name: $('rw-name').value.trim(),
+      icon: $('rw-icon').value.trim(),
+      cost: parseInt($('rw-cost').value) || 0,
+      prompt: $('rw-prompt').value.trim(),
+      backgroundColor: $('rw-color').value,
+      enabled: $('rw-enabled').checked,
+      skipQueue: $('rw-skipqueue').checked,
+      cooldownSeconds: parseInt($('rw-cooldown').value) || 0,
+      maxPerStream: parseInt($('rw-maxstream').value) || 0,
+      maxPerUserPerStream: parseInt($('rw-maxuser').value) || 0,
+      muted: $('rw-muted').checked,
+      durationSeconds: parseInt($('rw-duration').value) || 15,
+      videos: textToVideos($('rw-videos').value)
+    };
+    const body = { reward: reward, push: $('rw-push').checked && !$('rw-push').disabled };
+    try {
+      const data = await rwFetch(rwEditing >= 0 ? `/api/rewards/${rwEditing}` : '/api/rewards',
+                                 rwEditing >= 0 ? 'PUT' : 'POST', body);
+      const created = !reward.rewardId && data.reward && data.reward.rewardId;
+      toast(created ? '✅ Reward creada en Twitch y lista para usar' : '✅ Reward guardada');
+      closeRewardEditor();
+      await loadRewards();
+    } catch(e) { toast('❌ ' + e.message, 'error'); }
+  }
+
+  async function deleteReward(index) {
+    const r = rwData.rewards[index];
+    const st = rwData.states[index] || {};
+    if (!confirm(`¿Quitar «${r.name}» del bot?`)) return;
+    let twitch = false;
+    if (r.rewardId && st.state === 'synced' && st.manageable) {
+      twitch = confirm('¿Borrarla también de Twitch?\n\nAceptar = se borra de Twitch también\nCancelar = solo se quita del bot y sigue en tu canal');
+    }
+    try {
+      await rwFetch(`/api/rewards/${index}${twitch ? '?twitch=1' : ''}`, 'DELETE');
+      toast('✅ Reward eliminada');
+      closeRewardEditor();
+      await loadRewards();
+    } catch(e) { toast('❌ ' + e.message, 'error'); }
   }
 
   // ── LOGS ───────────────────────────────────────────────────────

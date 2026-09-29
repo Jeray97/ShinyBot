@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.soulshinygame.bot.commands.CommandRegistry;
 import com.soulshinygame.bot.database.DatabaseManager;
 import com.soulshinygame.bot.overlay.WebSocketOverlayServer;
+import com.soulshinygame.bot.rewards.RewardAdminService;
 import com.soulshinygame.bot.timers.TimerManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,17 +26,20 @@ public class AdminApiHandler {
     private final WebSocketOverlayServer overlayServer;
     private final TimerManager timerManager;
     private final AdminLogHandler logHandler;
+    private final RewardAdminService rewardService;
     private final String adminPassword;
     private final long startTime = System.currentTimeMillis();
 
     public AdminApiHandler(CommandRegistry registry, DatabaseManager db,
                            WebSocketOverlayServer overlayServer, TimerManager timerManager,
-                           AdminLogHandler logHandler, String adminPassword) {
+                           AdminLogHandler logHandler, RewardAdminService rewardService,
+                           String adminPassword) {
         this.registry       = registry;
         this.db             = db;
         this.overlayServer  = overlayServer;
         this.timerManager   = timerManager;
         this.logHandler     = logHandler;
+        this.rewardService  = rewardService;
         this.adminPassword  = adminPassword;
     }
 
@@ -54,6 +58,7 @@ public class AdminApiHandler {
             else if (path.equals("/api/database/collectibles")) handleCollectibles(ex);
             else if (path.equals("/api/media-commands"))        handleMediaCommands(ex, method);
             else if (path.equals("/api/timers"))                handleTimers(ex, method);
+            else if (path.equals("/api/rewards") || path.startsWith("/api/rewards/")) handleRewards(ex, method, path);
             else if (path.equals("/api/logs"))                  handleLogs(ex);
             else AdminServer.sendJson(ex, 404, "{\"error\":\"Route not found\"}");
         } catch (Exception e) {
@@ -171,6 +176,29 @@ public class AdminApiHandler {
             AdminServer.sendJson(ex, 200, "{\"ok\":true}");
             log.info("Admin actualizó timers.json");
         }
+    }
+
+    // ── /api/rewards  (GET lista · POST crea · PUT/DELETE /{index}) ─
+
+    private void handleRewards(HttpExchange ex, String method, String path) throws Exception {
+        RewardAdminService.Reply reply;
+        if (path.equals("/api/rewards")) {
+            if ("GET".equals(method))       reply = rewardService.list();
+            else if ("POST".equals(method)) reply = rewardService.save(-1, AdminServer.readBody(ex));
+            else { AdminServer.sendJson(ex, 405, "{\"error\":\"Method not allowed\"}"); return; }
+        } else {
+            int index;
+            try { index = Integer.parseInt(path.substring("/api/rewards/".length())); }
+            catch (NumberFormatException e) { AdminServer.sendJson(ex, 400, "{\"error\":\"Índice inválido\"}"); return; }
+
+            if ("PUT".equals(method)) {
+                reply = rewardService.save(index, AdminServer.readBody(ex));
+            } else if ("DELETE".equals(method)) {
+                String q = ex.getRequestURI().getQuery();
+                reply = rewardService.delete(index, q != null && q.contains("twitch=1"));
+            } else { AdminServer.sendJson(ex, 405, "{\"error\":\"Method not allowed\"}"); return; }
+        }
+        AdminServer.sendJson(ex, reply.status(), reply.json());
     }
 
     // ── GET /api/logs ─────────────────────────────────────────────
